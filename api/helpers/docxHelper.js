@@ -386,8 +386,9 @@ function convertMarkdownToDocx(markdownText) {
             alignment = AlignmentType.CENTER; // Center the Chapter Title
           }
           
-          // PageBreak before Heading 1, except for the first one
-          if (!isFirstHeading1) {
+          // PageBreak before Heading 1, except for the first one or specific headings that stay on the same page
+          const shouldSkipPageBreak = isFirstHeading1 || upperText.includes("CÁC DẠNG BÀI TẬP ÔN TẬP TIÊU BIỂU");
+          if (!shouldSkipPageBreak) {
             docChildren.push(new Paragraph({ children: [new PageBreak()] }));
           }
           isFirstHeading1 = false;

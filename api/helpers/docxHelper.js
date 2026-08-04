@@ -63,13 +63,14 @@ function sanitizeMarkdown(text) {
 // Accept sizing and coloring options to correctly apply styles to instantiated TextRuns
 function parseInlineText(text, size = 26, color = "000000", bold = false, italic = false) {
   const runs = [];
-  // Normalized characters like arrows
+  // Normalized characters like arrows and color span tags
   let normalizedText = text
     .replace(/-->/g, ' → ')
     .replace(/<=>/g, ' ⇌ ')
-    .replace(/->/g, ' → ');
+    .replace(/->/g, ' → ')
+    .replace(/<span style="color:\s*red;?">(.*?)<\/span>/gi, '<red>$1</red>');
 
-  const regex = /(\*\*.*?\*\*|\*.*?\*|<sub>.*?<\/sub>|<sup>.*?<\/sup>)/;
+  const regex = /(\*\*.*?\*\*|\*.*?\*|<sub>.*?<\/sub>|<sup>.*?<\/sup>|<red>.*?<\/red>)/;
   
   let remaining = normalizedText;
   while (remaining) {
@@ -109,7 +110,6 @@ function parseInlineText(text, size = 26, color = "000000", bold = false, italic
       runs.push(...innerRuns);
     } else if (token.startsWith('<sub>')) {
       const innerText = token.slice(5, -6);
-      // Increased size: size + 2 (so for 13pt body text it becomes 14pt (size 28), shrunk to ~10.5pt in Word)
       runs.push(new TextRun({ 
         text: innerText, 
         subScript: true, 
@@ -130,6 +130,10 @@ function parseInlineText(text, size = 26, color = "000000", bold = false, italic
         bold: bold,
         italic: italic
       }));
+    } else if (token.startsWith('<red>')) {
+      const innerText = token.slice(5, -6);
+      const innerRuns = parseInlineText(innerText, size, "FF0000", bold, italic);
+      runs.push(...innerRuns);
     }
     
     remaining = remaining.substring(index + token.length);

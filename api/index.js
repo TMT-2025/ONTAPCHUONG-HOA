@@ -152,12 +152,21 @@ app.post('/api/generate-section', async (req, res) => {
         - Bộ sách: Kết nối tri thức với cuộc sống
         
         Nội dung bao gồm:
-        1. Hệ thống câu hỏi tự kiểm tra đánh giá năng lực học sinh (Không cần cung cấp đáp án):
-           - Nhận biết (Ít nhất 5 câu hỏi trắc nghiệm hoặc lý thuyết hỏi đáp ngắn)
-           - Thông hiểu (Ít nhất 3 câu tự luận giải thích hiện tượng hóa học)
-           - Vận dụng/Vận dụng cao (Ít nhất 2 bài tập tính toán định lượng hoặc tình huống thực tế giải quyết vấn đề)
+        1. Hệ thống câu hỏi tự kiểm tra đánh giá năng lực học sinh (CUNG CẤP CÂU HỎI KÈM ĐÁP ÁN ĐỎ):
+           - Nhận biết: Ít nhất 5 câu hỏi trắc nghiệm khách quan. Mỗi câu hỏi phải có đầy đủ 4 phương án lựa chọn (A, B, C, D). Bắt buộc phương án đúng phải được bôi đỏ bằng cách bao quanh trong thẻ HTML <span style="color:red">A. Phương án đúng</span>.
+           - Thông hiểu: Ít nhất 3 câu tự luận giải thích hiện tượng hóa học, kèm gợi ý trả lời chi tiết. Bôi đỏ từ khóa quan trọng hoặc đáp án gợi ý bằng thẻ <span style="color:red">từ khóa</span>.
+           - Vận dụng/Vận dụng cao: Ít nhất 2 bài tập tính toán định lượng hoặc tình huống thực tế giải quyết vấn đề, kèm hướng dẫn giải chi tiết. Bôi đỏ đáp số cuối cùng bằng thẻ <span style="color:red">đáp số</span>.
         2. Checklist tự đánh giá kiến thức: Bảng tự đánh giá với danh sách các kiến thức cốt lõi (Bắt buộc dùng định dạng bảng Markdown có các cột: 'Nội dung kiến thức', 'Đã vững', 'Cần ôn lại', 'Ghi chú').
         3. Tóm tắt chương (1-2 đoạn văn ngắn gọn khái quát tinh thần của cả chương).
+        
+        YÊU CẦU BẮT BUỘC VỀ DẤU TIẾNG VIỆT VÀ ĐỊNH DẠNG:
+        - VIẾT HOÀN TOÀN BẰNG TIẾNG VIỆT CHUẨN CÓ ĐẦY ĐỦ DẤU (Ví dụ: phải viết 'Trong phản ứng', 'chất nào là chất khử', tuyệt đối không được viết không dấu kiểu 'Trong phan ung', 'chat nao la chat khu'). Quy định này áp dụng nghiêm ngặt cho tất cả các câu hỏi trắc nghiệm, tự luận và tóm tắt chương.
+        - Định dạng trắc nghiệm: Các phương án lựa chọn A, B, C, D phải bắt đầu ở một dòng mới và tuyệt đối KHÔNG ĐƯỢC đặt các ký tự gạch đầu dòng (*, -, •) ở trước chữ cái phương án. 
+          Ví dụ viết đúng:
+          A. Chất khử
+          <span style="color:red">B. Chất oxi hóa</span>
+          C. Môi trường
+          D. Tác nhân phản ứng
         
         ${sharedInstructions}`;
         break;

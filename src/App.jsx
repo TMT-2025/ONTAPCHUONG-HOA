@@ -46,6 +46,7 @@ function App() {
   ]);
 
   const previewEndRef = useRef(null);
+  const downloadButtonRef = useRef(null);
 
   // Load API Key from localStorage
   useEffect(() => {
@@ -334,6 +335,14 @@ function App() {
       const blob = await res.blob();
       setGeneratedDocBlob(blob);
       setIsGenerating(false);
+
+      // Auto-focus and scroll to the download button for better UX
+      setTimeout(() => {
+        if (downloadButtonRef.current) {
+          downloadButtonRef.current.focus();
+          downloadButtonRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } catch (err) {
       setGenerationError(err.message);
       setIsGenerating(false);
@@ -693,8 +702,9 @@ function App() {
                 </button>
 
                 <button
+                  ref={downloadButtonRef}
                   onClick={downloadDocx}
-                  class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-extrabold text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 transition-all border border-teal-400/20"
+                  class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-extrabold text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 transition-all border border-teal-400/20 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-950"
                 >
                   <Download class="h-4.5 w-4.5 stroke-[2.5]" />
                   Tải file DOCX

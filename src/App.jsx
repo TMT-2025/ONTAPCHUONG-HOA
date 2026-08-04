@@ -474,23 +474,23 @@ function App() {
           )}
 
           {/* SELECTOR PANEL */}
-          <div class="rounded-xl glass-panel p-6 border border-slate-800 shadow-lg">
-            <h2 class="font-display font-bold text-lg text-slate-200 mb-5 flex items-center gap-2">
+          <div class="rounded-xl glass-panel p-4 border border-slate-800 shadow-lg">
+            <h2 class="font-display font-bold text-base text-slate-200 mb-3 flex items-center gap-2">
               <BookOpen class="h-5 w-5 text-teal-400" />
               Thông tin biên soạn
             </h2>
 
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-3">
               {/* Grade Selector */}
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chọn lớp học</label>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Chọn lớp học</label>
                 <div class="grid grid-cols-3 gap-2">
                   {['10', '11', '12'].map(g => (
                     <button
                       key={g}
                       onClick={() => handleGradeChange(g)}
                       disabled={isGenerating}
-                      class={`py-2.5 px-3 rounded-lg border font-bold text-sm tracking-wide transition-all ${
+                      class={`py-1.5 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
                         grade === g 
                           ? 'bg-gradient-to-tr from-teal-500/20 to-emerald-400/10 border-teal-500 text-teal-200 shadow-md shadow-teal-500/5' 
                           : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-300 hover:border-slate-700'
@@ -504,12 +504,12 @@ function App() {
 
               {/* Program Type Selector */}
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Loại chương trình</label>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Loại chương trình</label>
                 <div class="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleProgramTypeChange('standard')}
                     disabled={isGenerating}
-                    class={`py-2 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
+                    class={`py-1.5 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
                       programType === 'standard' 
                         ? 'bg-gradient-to-tr from-teal-500/20 to-emerald-400/10 border-teal-500 text-teal-200 shadow-md shadow-teal-500/5' 
                         : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-300 hover:border-slate-700'
@@ -520,7 +520,7 @@ function App() {
                   <button
                     onClick={() => handleProgramTypeChange('topics')}
                     disabled={isGenerating}
-                    class={`py-2 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
+                    class={`py-1.5 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
                       programType === 'topics' 
                         ? 'bg-gradient-to-tr from-teal-500/20 to-emerald-400/10 border-teal-500 text-teal-200 shadow-md shadow-teal-500/5' 
                         : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-300 hover:border-slate-700'
@@ -533,14 +533,14 @@ function App() {
 
               {/* Chapter Selector */}
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                   {programType === 'topics' ? 'Chọn chuyên đề ôn tập' : 'Chọn chương ôn tập'}
                 </label>
                 <select
                   value={chapterId}
                   onChange={(e) => setChapterId(e.target.value)}
                   disabled={isGenerating || !curriculumData}
-                  class="w-full px-3 py-2.5 bg-slate-900/60 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-teal-500 font-medium text-sm"
+                  class="w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-teal-500 font-medium text-xs"
                 >
                   {!curriculumData && <option>Đang tải danh sách chương...</option>}
                   {curriculumData && curriculumData[programType]?.[grade]?.chapters.map(c => (
@@ -553,18 +553,18 @@ function App() {
 
               {/* Chapter Summary metadata */}
               {activeChapterData && (
-                <div class="mt-2 p-3.5 rounded-lg bg-slate-900/50 border border-slate-800/80">
-                  <span class="block text-[10px] font-bold text-teal-500 uppercase tracking-wider mb-1">
+                <div class="mt-1 p-2 rounded-lg bg-slate-900/50 border border-slate-800/80">
+                  <span class="block text-[9px] font-bold text-teal-500 uppercase tracking-wider mb-0.5">
                     Cấu trúc chương trình SGK
                   </span>
-                  <p class="text-xs text-slate-300 leading-relaxed">
-                    Chương này chứa **{activeChapterData.lessons.length} bài học** lý thuyết cần biên soạn nội dung ôn tập:
+                  <p class="text-[11px] text-slate-300 leading-normal">
+                    Chương này chứa **{activeChapterData.lessons.length} bài học** lý thuyết cần ôn tập:
                   </p>
-                  <ul class="mt-2 flex flex-col gap-1.5">
+                  <ul class="mt-1 flex flex-col gap-0.5">
                     {activeChapterData.lessons.map((lesson, idx) => (
-                      <li key={idx} class="text-[11px] text-slate-400 flex items-start gap-1.5 font-medium leading-relaxed">
-                        <ChevronRight class="h-3.5 w-3.5 text-teal-500/70 shrink-0 mt-0.5" />
-                        <span>{lesson}</span>
+                      <li key={idx} class="text-[10px] text-slate-400 flex items-start gap-1 font-medium leading-relaxed">
+                        <ChevronRight class="h-3 w-3 text-teal-500/70 shrink-0 mt-0.5" />
+                        <span class="truncate">{lesson}</span>
                       </li>
                     ))}
                   </ul>
@@ -575,7 +575,7 @@ function App() {
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || isExporting || !curriculumData}
-                class="w-full mt-4 py-3 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 disabled:from-slate-900 disabled:to-slate-900 disabled:border-slate-800 text-slate-950 disabled:text-slate-600 font-extrabold text-sm rounded-xl tracking-wider uppercase transition-all shadow-xl shadow-teal-500/10 hover:shadow-teal-400/20 flex items-center justify-center gap-2 border border-teal-400/20 disabled:border-none"
+                class="w-full mt-2 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 disabled:from-slate-900 disabled:to-slate-900 disabled:border-slate-800 text-slate-950 disabled:text-slate-600 font-extrabold text-xs rounded-xl tracking-wider uppercase transition-all shadow-xl shadow-teal-500/10 hover:shadow-teal-400/20 flex items-center justify-center gap-2 border border-teal-400/20 disabled:border-none"
               >
                 {isGenerating ? (
                   <>

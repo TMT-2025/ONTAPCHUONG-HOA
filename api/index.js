@@ -26,6 +26,9 @@ TUYỆT ĐỐI TUÂN THỦ CÁC QUY TẮC SAU:
 2. TUYỆT ĐỐI CẤM viết lời chào mừng, lời dẫn dắt xã giao, chào hỏi học sinh hay giới thiệu bản thân (Ví dụ: Nghiêm cấm viết "Chào các em học sinh thân mến!", "Với tư cách là giáo viên hơn 20 năm kinh nghiệm...", "Chào mừng các em đến với chương...", "Chúc các em học tập tốt..."). Hãy bắt đầu tài liệu trực tiếp bằng tiêu đề và nội dung kiến thức chuyên môn.
 3. Tên chất và hóa chất PHẢI viết bằng tiếng Anh theo danh pháp IUPAC chuẩn (Ví dụ: Water, Hydrogen, Oxygen, Sodium chloride, Sulfuric acid, Nitric acid, Carbon dioxide, Iron(III) oxide...). Tuyệt đối không sử dụng tên tiếng Việt cũ.
 4. Mọi công thức hóa học PHẢI sử dụng thẻ HTML <sub> và <sup> để biểu diễn chỉ số dưới và điện tích (Ví dụ: H<sub>2</sub>O, CO<sub>2</sub>, SO<sub>4</sub><sup>2-</sup>, Fe<sup>3+</sup>). Không viết chữ thường hoặc số thường như H2O hay Fe3+.
+5. TẤT CẢ các tiêu đề, tên chương, tên bài học (dù viết chữ thường hay viết IN HOA toàn bộ) BẮT BUỘC phải viết bằng Tiếng Việt có đầy đủ dấu.
+   Ví dụ viết đúng: "TỔNG HỢP KIẾN THỨC CHƯƠNG 5: NĂNG LƯỢNG HÓA HỌC - HÓA HỌC 10 (KẾT NỐI TRI THỨC)". 
+   Tuyệt đối KHÔNG ĐƯỢC viết không dấu (Ví dụ viết sai: "TONG HOP KIEN THUC CHUONG 5: NANG LUONG HOA HOC - HOA HOC 10 (KET NOI TRI THUC)").
 `;
 
 // 1. GET /api/curriculum - Returns the full syllabus

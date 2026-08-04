@@ -70,12 +70,13 @@ app.post('/api/generate-section', async (req, res) => {
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung cần viết chi tiết, khoa học, giúp học sinh tự học định hướng rõ mục tiêu.
+        Nội dung cần viết ngắn gọn, khoa học, súc tích giúp học sinh tự học định hướng nhanh mục tiêu.
         
         Yêu cầu đặc biệt cho phần này:
         - Phần "Mục tiêu, Kiến thức cần đạt" phải được chia làm đúng 2 nội dung lớn là:
-          1. **Mục tiêu**: trình bày rõ các mục tiêu cần hướng tới về mặt phát triển năng lực học sinh (bao gồm Năng lực hóa học và Năng lực chung).
-          2. **Kiến thức cần đạt**: liệt kê chi tiết các đơn vị kiến thức, yêu cầu cần đạt trọng tâm của chương mà học sinh cần phải nắm vững sau khi học xong.
+          1. **Mục tiêu**: trình bày thật ngắn gọn, cô đọng mục tiêu cần hướng tới về mặt phát triển năng lực học sinh (bao gồm Năng lực hóa học và Năng lực chung).
+          2. **Kiến thức cần đạt**: liệt kê cực kỳ ngắn gọn các đơn vị kiến thức trọng tâm cốt lõi nhất của chương học sinh cần nắm vững.
+        - YÊU CẦU ĐỘ DÀI: Do đây là tài liệu ôn tập, hãy viết cực kỳ ngắn gọn và cô đọng. Độ dài của phần "Mục tiêu" chỉ trong khoảng 30 - 60 chữ. Độ dài của phần "Kiến thức cần đạt" cũng chỉ trong khoảng 30 - 60 chữ. Tuyệt đối không được viết dài dòng giải thích dông dài.
         - TUYỆT ĐỐI KHÔNG ĐƯỢC tạo thêm các mục tiêu liên quan đến "Thái độ và giá trị", "Phẩm chất", "Thái độ" hay bất kỳ nội dung nào khác ngoài 2 phần trên.
         
         ${sharedInstructions}`;

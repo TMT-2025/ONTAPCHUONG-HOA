@@ -22,7 +22,7 @@ function App() {
   const [grade, setGrade] = useState('10');
   const [chapterId, setChapterId] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [modelName, setModelName] = useState('gemini-2.5-flash');
+  const [modelName, setModelName] = useState('gemini-3.5-flash-lite');
   const [showSettings, setShowSettings] = useState(false);
   
   // Generation State
@@ -439,7 +439,7 @@ function App() {
                     type="text"
                     value={modelName}
                     onChange={(e) => setModelName(e.target.value)}
-                    placeholder="gemini-2.5-flash"
+                    placeholder="gemini-3.5-flash-lite"
                     class="w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-teal-500 font-mono text-sm"
                   />
                 </div>

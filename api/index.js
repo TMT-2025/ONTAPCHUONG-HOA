@@ -42,7 +42,7 @@ app.post('/api/generate-section', async (req, res) => {
     return res.status(401).json({ error: "Missing API Key. Vui lòng cấu hình API Key từ màn hình cài đặt." });
   }
 
-  const modelName = customModel || "gemini-2.5-flash";
+  const modelName = customModel || "gemini-3.5-flash-lite";
 
   const targetProgram = curriculum[programType] ? programType : 'standard';
   const gradeData = curriculum[targetProgram]?.[grade];

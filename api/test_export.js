@@ -1,6 +1,6 @@
 const fs = require('fs');
 const docx = require('docx');
-const { generateDocx } = require('./docxHelper');
+const { generateDocx } = require('./helpers/docxHelper');
 const Packer = docx.Packer;
 
 const sampleMarkdown = `

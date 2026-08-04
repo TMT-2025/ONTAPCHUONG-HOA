@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const curriculum = require('./curriculum');
-const { generateDocx } = require('./docxHelper');
+const curriculum = require('./helpers/curriculum');
+const { generateDocx } = require('./helpers/docxHelper');
 const docx = require('docx');
 const Packer = docx.Packer;
 

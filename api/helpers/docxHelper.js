@@ -60,7 +60,8 @@ function sanitizeMarkdown(text) {
 }
 
 // Function to recursively parse inline styles (bold, italic, sub, sup) in text
-function parseInlineText(text) {
+// Accept sizing and coloring options to correctly apply styles to instantiated TextRuns
+function parseInlineText(text, size = 26, color = "000000", bold = false, italic = false) {
   const runs = [];
   // Normalized characters like arrows
   let normalizedText = text
@@ -77,7 +78,10 @@ function parseInlineText(text) {
       runs.push(new TextRun({ 
         text: remaining, 
         font: "Times New Roman", 
-        size: 26 // 13pt
+        size: size,
+        color: color,
+        bold: bold,
+        italic: italic
       }));
       break;
     }
@@ -87,33 +91,33 @@ function parseInlineText(text) {
       runs.push(new TextRun({ 
         text: remaining.substring(0, index), 
         font: "Times New Roman", 
-        size: 26 
+        size: size,
+        color: color,
+        bold: bold,
+        italic: italic
       }));
     }
     
     const token = match[0];
     if (token.startsWith('**')) {
       const innerText = token.slice(2, -2);
-      const innerRuns = parseInlineText(innerText);
-      innerRuns.forEach(run => {
-        run.bold = true;
-      });
+      const innerRuns = parseInlineText(innerText, size, color, true, italic);
       runs.push(...innerRuns);
     } else if (token.startsWith('*')) {
       const innerText = token.slice(1, -1);
-      const innerRuns = parseInlineText(innerText);
-      innerRuns.forEach(run => {
-        run.italic = true;
-      });
+      const innerRuns = parseInlineText(innerText, size, color, bold, true);
       runs.push(...innerRuns);
     } else if (token.startsWith('<sub>')) {
       const innerText = token.slice(5, -6);
-      // Set size: 28 (14pt) so that Word's auto-shrunk subscript is large and legible.
+      // Increased size: size + 2 (so for 13pt body text it becomes 14pt (size 28), shrunk to ~10.5pt in Word)
       runs.push(new TextRun({ 
         text: innerText, 
         subScript: true, 
         font: "Times New Roman", 
-        size: 28 
+        size: size + 2,
+        color: color,
+        bold: bold,
+        italic: italic
       }));
     } else if (token.startsWith('<sup>')) {
       const innerText = token.slice(5, -6);
@@ -121,7 +125,10 @@ function parseInlineText(text) {
         text: innerText, 
         superScript: true, 
         font: "Times New Roman", 
-        size: 28 
+        size: size + 2,
+        color: color,
+        bold: bold,
+        italic: italic
       }));
     }
     
@@ -177,10 +184,6 @@ function convertMarkdownToDocx(markdownText) {
     switch (token.type) {
       case 'heading': {
         const text = token.text;
-        const runs = parseInlineText(text);
-        runs.forEach(run => {
-          run.bold = true;
-        });
         
         let level, size, color, before, after;
         if (token.depth === 1) {
@@ -227,12 +230,8 @@ function convertMarkdownToDocx(markdownText) {
           after = 90;
         }
         
-        // Ensure font is Times New Roman and correct size/color
-        runs.forEach(run => {
-          run.font = "Times New Roman";
-          run.size = size;
-          run.color = color;
-        });
+        // Pass style parameters directly to parseInlineText to properly update TextRun XML properties
+        const runs = parseInlineText(text, size, color, true);
         
         docChildren.push(new Paragraph({
           heading: level,
@@ -252,7 +251,7 @@ function convertMarkdownToDocx(markdownText) {
           const p = new Paragraph({
             children: [
               new TextRun({ text: isTip ? "💡 Mẹo ghi nhớ: " : "⚠️ Lưu ý: ", bold: true, font: "Times New Roman", size: 26, color: isTip ? '1565C0' : 'F57F17' }),
-              ...parseInlineText(cleanText)
+              ...parseInlineText(cleanText, 26, "000000", false)
             ],
             alignment: AlignmentType.JUSTIFIED,
             spacing: { line: 360, before: 60, after: 60 }
@@ -264,7 +263,7 @@ function convertMarkdownToDocx(markdownText) {
         // Handle stand-alone Chemical Equation rendering in center
         if (isChemicalEquation(text)) {
           docChildren.push(new Paragraph({
-            children: parseInlineText(text),
+            children: parseInlineText(text, 26, "000000", false),
             alignment: AlignmentType.CENTER,
             spacing: { before: 180, after: 180 }
           }));
@@ -273,7 +272,7 @@ function convertMarkdownToDocx(markdownText) {
         
         // Standard paragraph
         docChildren.push(new Paragraph({
-          children: parseInlineText(text),
+          children: parseInlineText(text, 26, "000000", false),
           alignment: AlignmentType.JUSTIFIED,
           spacing: { line: 360, before: 120, after: 120 }
         }));
@@ -293,7 +292,7 @@ function convertMarkdownToDocx(markdownText) {
               isTip = true;
             }
             paragraphs.push(new Paragraph({
-              children: parseInlineText(text),
+              children: parseInlineText(text, 26, "000000", false),
               alignment: AlignmentType.JUSTIFIED,
               spacing: { line: 360, before: 60, after: 60 }
             }));
@@ -317,7 +316,7 @@ function convertMarkdownToDocx(markdownText) {
           } else {
             runs.push(new TextRun({ text: "•  ", bold: true, font: "Times New Roman", size: 26 }));
           }
-          runs.push(...parseInlineText(itemText));
+          runs.push(...parseInlineText(itemText, 26, "000000", false));
           
           docChildren.push(new Paragraph({
             children: runs,
@@ -338,8 +337,7 @@ function convertMarkdownToDocx(markdownText) {
           return new TableCell({
             children: [
               new Paragraph({
-                children: parseInlineText(headerToken.text),
-                bold: true,
+                children: parseInlineText(headerToken.text, 26, "1A365D", true),
                 alignment: AlignmentType.CENTER
               })
             ],
@@ -355,7 +353,7 @@ function convertMarkdownToDocx(markdownText) {
             return new TableCell({
               children: [
                 new Paragraph({
-                  children: parseInlineText(cellToken.text),
+                  children: parseInlineText(cellToken.text, 26, "000000", false),
                   alignment: AlignmentType.LEFT
                 })
               ],

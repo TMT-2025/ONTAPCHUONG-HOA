@@ -37,12 +37,12 @@ function App() {
 
   // Steps configuration
   const [steps, setSteps] = useState([
-    { id: 'intro', label: 'Giới thiệu chương & Mục tiêu', status: 'idle' },
-    { id: 'lessons', label: 'Kiến thức bài học trọng tâm', status: 'idle' },
-    { id: 'summary', label: 'Công thức, quy tắc & Bảng tổng hợp', status: 'idle' },
-    { id: 'exercises', label: 'Các dạng bài tập & Lời giải mẫu', status: 'idle' },
-    { id: 'mistakes', label: 'Lỗi thường gặp & Mẹo ghi nhớ', status: 'idle' },
-    { id: 'tests', label: 'Câu hỏi tự kiểm tra & Checklist', status: 'idle' }
+    { id: 'intro', label: '1. Giới thiệu chương & Mục tiêu', status: 'idle' },
+    { id: 'lessons', label: '2. Kiến thức bài học trọng tâm', status: 'idle' },
+    { id: 'summary', label: '3. Công thức, quy tắc & Bảng tổng hợp', status: 'idle' },
+    { id: 'exercises', label: '4. Các dạng bài tập & Lời giải mẫu', status: 'idle' },
+    { id: 'mistakes', label: '5. Lỗi thường gặp & Mẹo ghi nhớ', status: 'idle' },
+    { id: 'tests', label: '6. Câu hỏi tự kiểm tra & Checklist', status: 'idle' }
   ]);
 
   const previewEndRef = useRef(null);
@@ -666,21 +666,21 @@ function App() {
                         step.status === 'running'
                           ? 'bg-teal-500/20 text-teal-400 border border-teal-500/40'
                           : step.status === 'done'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                           : step.status === 'error'
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                          : 'bg-slate-900 text-slate-600 border border-slate-800'
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          : 'bg-slate-900 text-slate-500 border border-slate-800'
                       }`}>
-                        {step.status === 'done' ? '✓' : idx + 1}
+                        {idx + 1}
                       </span>
                       <span>{step.label}</span>
                     </div>
 
-                    <div class="text-xs font-medium uppercase tracking-wider">
-                      {step.status === 'running' && <span class="text-teal-400 animate-pulse">đang chạy...</span>}
-                      {step.status === 'done' && <span class="text-emerald-500">xong</span>}
-                      {step.status === 'error' && <span class="text-red-500 font-bold">lỗi</span>}
-                      {step.status === 'idle' && <span class="text-slate-600">chờ</span>}
+                    <div class="text-xs font-bold tracking-wider">
+                      {step.status === 'running' && <span class="text-teal-400 animate-pulse">Đang chạy...</span>}
+                      {step.status === 'done' && <span class="text-emerald-400">Đã xong</span>}
+                      {step.status === 'error' && <span class="text-red-400">Lỗi</span>}
+                      {step.status === 'idle' && <span class="text-slate-500">Chờ</span>}
                     </div>
                   </div>
                 ))}

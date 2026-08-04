@@ -743,7 +743,7 @@ function App() {
           )}
 
           {/* LIVE TEXT PREVIEW PANEL */}
-          {accumulatedMarkdown && (showPreview || isGenerating) && (
+          {accumulatedMarkdown && showPreview && !isGenerating && (
             <div class="rounded-xl glass-panel border border-slate-800 shadow-lg overflow-hidden flex flex-col h-[500px]">
               {/* Header */}
               <div class="px-5 py-3 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between">

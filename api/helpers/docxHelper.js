@@ -420,6 +420,9 @@ function generateDocx(grade, chapterTitle, markdownContent) {
   const pageHeader = createPageNumberHeader();
   
   return new Document({
+    features: {
+      updateFields: true
+    },
     sections: [
       // 1. COVER PAGE (with page number 1 in header as in PDF)
       {
@@ -525,18 +528,6 @@ function generateDocx(grade, chapterTitle, markdownContent) {
           new TableOfContents("Mục lục", {
             hyperlink: true,
             headingStyleRange: "1-3"
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Lưu ý: Sau khi mở file Word, vui lòng nhấn chuột phải vào vùng mục lục ở trên và chọn 'Update Field' để hiển thị đầy đủ số trang chính xác.",
-                font: "Times New Roman",
-                size: 20,
-                italic: true,
-                color: "718096"
-              })
-            ],
-            spacing: { before: 240 }
           }),
           new Paragraph({ children: [new PageBreak()] })
         ]

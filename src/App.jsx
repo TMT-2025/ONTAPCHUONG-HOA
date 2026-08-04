@@ -655,13 +655,6 @@ function App() {
                 </button>
               </div>
 
-              {/* Tip info */}
-              <div class="w-full flex items-start gap-2.5 p-3.5 rounded-lg bg-emerald-950/10 border border-emerald-500/10 text-left text-[11px] text-emerald-400/80 leading-relaxed max-w-lg">
-                <Info class="h-4.5 w-4.5 shrink-0 mt-0.5 text-emerald-400" />
-                <p>
-                  <strong>Mẹo Office Word:</strong> Khi mở file tài liệu vừa tải về trong Microsoft Word, phần **Mục lục** có thể bị hiển thị trống hoặc sai số trang. Hãy **click chuột phải vào mục lục** và chọn **Update Field** để Word tự động dò tìm và lập chỉ số trang tự động chính xác nhất.
-                </p>
-              </div>
             </div>
           )}
 

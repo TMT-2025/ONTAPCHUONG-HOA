@@ -54,7 +54,14 @@ function App() {
     if (savedKey) setApiKey(savedKey);
 
     const savedModel = localStorage.getItem('gemini_model_name');
-    if (savedModel) setModelName(savedModel);
+    if (savedModel) {
+      if (savedModel === 'gemini-3.1-flash-lite') {
+        setModelName('gemini-3.5-flash-lite');
+        localStorage.setItem('gemini_model_name', 'gemini-3.5-flash-lite');
+      } else {
+        setModelName(savedModel);
+      }
+    }
 
     // Fetch curriculum syllabus
     fetch('/api/curriculum')

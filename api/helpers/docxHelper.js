@@ -13,7 +13,9 @@ const {
   AlignmentType,
   BorderStyle,
   TableOfContents,
-  PageBreak
+  PageBreak,
+  Header,
+  PageNumber
 } = docx;
 
 // Helper: Sanitize LaTeX math syntax and convert it to readable Unicode text
@@ -106,7 +108,6 @@ function parseInlineText(text) {
       runs.push(...innerRuns);
     } else if (token.startsWith('<sub>')) {
       const innerText = token.slice(5, -6);
-      // Removed toUnicode conversion to prevent double-shrinking.
       // Set size: 28 (14pt) so that Word's auto-shrunk subscript is large and legible.
       runs.push(new TextRun({ 
         text: innerText, 
@@ -185,7 +186,15 @@ function convertMarkdownToDocx(markdownText) {
         if (token.depth === 1) {
           level = HeadingLevel.HEADING_1;
           size = 32; // 16pt
-          color = '1A365D'; // Dark Blue
+          
+          // Style Heading 1 colors based on DINH DANG VAN BAN.pdf
+          const upperText = text.toUpperCase();
+          if (upperText.includes("TỔNG HỢP KIẾN THỨC") || upperText.includes("TÀI LIỆU ÔN TẬP")) {
+            color = '0056B3'; // Blue
+          } else {
+            color = 'FF0000'; // Red
+          }
+          
           before = 360;
           after = 180;
           
@@ -197,13 +206,23 @@ function convertMarkdownToDocx(markdownText) {
         } else if (token.depth === 2) {
           level = HeadingLevel.HEADING_2;
           size = 28; // 14pt
-          color = '2B6CB0'; // Medium Dark Blue
+          color = '0056B3'; // Blue (all Heading 2 are blue)
           before = 240;
           after = 120;
         } else {
           level = HeadingLevel.HEADING_3;
           size = 26; // 13pt
-          color = '2D3748'; // Charcoal
+          
+          // Style Heading 3 colors based on DINH DANG VAN BAN.pdf
+          const upperText = text.toUpperCase();
+          if (upperText.includes("NHẬN BIẾT") || upperText.includes("VẬN DỤNG")) {
+            color = 'FF0000'; // Red
+          } else if (upperText.includes("THÔNG HIỂU")) {
+            color = '2E7D32'; // Green
+          } else {
+            color = '0056B3'; // Blue (Default heading color)
+          }
+          
           before = 180;
           after = 90;
         }
@@ -372,15 +391,39 @@ function convertMarkdownToDocx(markdownText) {
   return docChildren;
 }
 
+// Helper to create page number in the header (centered at the top of the page)
+function createPageNumberHeader() {
+  return {
+    default: new Header({
+      children: [
+        new Paragraph({
+          children: [
+            new TextRun({
+              children: [PageNumber.CURRENT],
+              font: "Times New Roman",
+              size: 24, // 12pt
+              color: "000000"
+            })
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 120 }
+        })
+      ]
+    })
+  };
+}
+
 // Function to generate the full beautiful Document
 function generateDocx(grade, chapterTitle, markdownContent) {
   const parsedContent = convertMarkdownToDocx(markdownContent);
   const today = new Date().toLocaleDateString('vi-VN');
+  const pageHeader = createPageNumberHeader();
   
   return new Document({
     sections: [
-      // 1. COVER PAGE
+      // 1. COVER PAGE (with page number 1 in header as in PDF)
       {
+        headers: pageHeader,
         properties: {},
         children: [
           new Paragraph({ text: "", spacing: { before: 1800 } }),
@@ -462,8 +505,9 @@ function generateDocx(grade, chapterTitle, markdownContent) {
           new Paragraph({ children: [new PageBreak()] })
         ]
       },
-      // 2. TABLE OF CONTENTS
+      // 2. TABLE OF CONTENTS (with page number 2 in header)
       {
+        headers: pageHeader,
         properties: {},
         children: [
           new Paragraph({
@@ -497,8 +541,9 @@ function generateDocx(grade, chapterTitle, markdownContent) {
           new Paragraph({ children: [new PageBreak()] })
         ]
       },
-      // 3. CORE DOCUMENT CONTENT
+      // 3. CORE DOCUMENT CONTENT (with page numbers 3, 4, 5... in header)
       {
+        headers: pageHeader,
         properties: {},
         children: parsedContent
       }

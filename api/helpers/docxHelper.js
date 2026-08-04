@@ -372,21 +372,23 @@ function convertMarkdownToDocx(markdownText) {
       case 'heading': {
         const text = token.text;
         
-        let level, size, color, before, after;
+        let level, size, color, before, after, alignment = AlignmentType.LEFT;
+        const upperText = text.toUpperCase();
+        
         if (token.depth === 1) {
           level = HeadingLevel.HEADING_1;
           size = 32; // 16pt
+          before = 360;
+          after = 180;
           
-          // Style Heading 1 colors based on DINH DANG VAN BAN.pdf
-          const upperText = text.toUpperCase();
-          if (upperText.includes("TỔNG HỢP KIẾN THỨC") || upperText.includes("TÀI LIỆU ÔN TẬP")) {
+          if (upperText.includes("CHƯƠNG")) {
+            color = 'FF0000'; // Red
+            alignment = AlignmentType.CENTER; // Center the Chapter Title!
+          } else if (upperText.includes("BÀI") || upperText.includes("TỔNG HỢP KIẾN THỨC") || upperText.includes("TÀI LIỆU ÔN TẬP")) {
             color = '0056B3'; // Blue
           } else {
             color = 'FF0000'; // Red
           }
-          
-          before = 360;
-          after = 180;
           
           // PageBreak before Heading 1, except for the first one
           if (!isFirstHeading1) {
@@ -402,9 +404,9 @@ function convertMarkdownToDocx(markdownText) {
         } else {
           level = HeadingLevel.HEADING_3;
           size = 26; // 13pt
+          before = 180;
+          after = 90;
           
-          // Style Heading 3 colors based on DINH DANG VAN BAN.pdf
-          const upperText = text.toUpperCase();
           if (upperText.includes("NHẬN BIẾT") || upperText.includes("VẬN DỤNG")) {
             color = 'FF0000'; // Red
           } else if (upperText.includes("THÔNG HIỂU")) {
@@ -412,9 +414,6 @@ function convertMarkdownToDocx(markdownText) {
           } else {
             color = '0056B3'; // Blue (Default heading color)
           }
-          
-          before = 180;
-          after = 90;
         }
         
         // Pass style parameters directly to parseInlineText to properly update TextRun XML properties
@@ -423,6 +422,7 @@ function convertMarkdownToDocx(markdownText) {
         docChildren.push(new Paragraph({
           heading: level,
           children: runs,
+          alignment: alignment,
           spacing: { before, after }
         }));
         break;

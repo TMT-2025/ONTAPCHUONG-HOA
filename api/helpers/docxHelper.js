@@ -161,6 +161,37 @@ function isOption(text, letter) {
   return clean.toUpperCase().startsWith(letter + '.');
 }
 
+// Helper to split a single paragraph containing inline A., B., C., D. options into distinct parts
+function splitMCQParagraph(text) {
+  const regexA = /(?:^|\s|>)(\*\*A\.\*\*|\*A\.\*|A\.|<span[^>]*>\s*A\.)/i;
+  const regexB = /(?:^|\s|>)(\*\*B\.\*\*|\*B\.\*|B\.|<span[^>]*>\s*B\.)/i;
+  const regexC = /(?:^|\s|>)(\*\*C\.\*\*|\*C\.\*|C\.|<span[^>]*>\s*C\.)/i;
+  const regexD = /(?:^|\s|>)(\*\*D\.\*\*|\*D\.\*|D\.|<span[^>]*>\s*D\.)/i;
+
+  const matchA = text.match(regexA);
+  const matchB = text.match(regexB);
+  const matchC = text.match(regexC);
+  const matchD = text.match(regexD);
+
+  if (matchA && matchB && matchC && matchD) {
+    const idxA = text.indexOf(matchA[1]);
+    const idxB = text.indexOf(matchB[1], idxA + matchA[1].length);
+    const idxC = text.indexOf(matchC[1], idxB + matchB[1].length);
+    const idxD = text.indexOf(matchD[1], idxC + matchC[1].length);
+
+    if (idxA !== -1 && idxB > idxA && idxC > idxB && idxD > idxC) {
+      return {
+        question: text.substring(0, idxA).trim(),
+        optA: text.substring(idxA, idxB).trim(),
+        optB: text.substring(idxB, idxC).trim(),
+        optC: text.substring(idxC, idxD).trim(),
+        optD: text.substring(idxD).trim()
+      };
+    }
+  }
+  return null;
+}
+
 // Generates a callout box as a single-cell table
 function createCalloutBox(contentParagraphs, type) {
   const isTip = type === 'tip';
@@ -199,6 +230,8 @@ function convertMarkdownToDocx(markdownText) {
 
   // Local helper to render a single paragraph (handles callouts, chemical equations, standard text)
   function renderParagraph(pText) {
+    if (!pText) return;
+    
     // Handle Blockquote / Callout Boxes manually if marked as Notes/Tips in text
     if (pText.startsWith('**Lưu ý:**') || pText.startsWith('**Mẹo ghi nhớ:**') || pText.startsWith('Lưu ý:') || pText.startsWith('Mẹo ghi nhớ:')) {
       const isTip = pText.includes('Mẹo ghi nhớ');
@@ -232,6 +265,73 @@ function convertMarkdownToDocx(markdownText) {
       spacing: { line: 360, before: 120, after: 120 }
     }));
   }
+
+  // Local helper to render MCQ options
+  function renderMCQ(mcq) {
+    // Render the question first
+    renderParagraph(mcq.question);
+    
+    // Layout the options
+    const optA = mcq.optA;
+    const optB = mcq.optB;
+    const optC = mcq.optC;
+    const optD = mcq.optD;
+    
+    const cleanA = optA.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+    const cleanB = optB.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+    const cleanC = optC.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+    const cleanD = optD.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+    
+    const maxLength = Math.max(cleanA.length, cleanB.length, cleanC.length, cleanD.length);
+    
+    const runsA = parseInlineText(optA, 26, "000000", false);
+    const runsB = parseInlineText(optB, 26, "000000", false);
+    const runsC = parseInlineText(optC, 26, "000000", false);
+    const runsD = parseInlineText(optD, 26, "000000", false);
+    
+    if (maxLength <= 15) {
+      // Case 1: 1 line (All 4 options on a single line)
+      docChildren.push(new Paragraph({
+        children: [
+          ...runsA,
+          new TextRun({ text: "      " }),
+          ...runsB,
+          new TextRun({ text: "      " }),
+          ...runsC,
+          new TextRun({ text: "      " }),
+          ...runsD
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { line: 360, before: 60, after: 60 }
+      }));
+    } else if (maxLength <= 35) {
+      // Case 2: 2 lines (2 options per line)
+      docChildren.push(new Paragraph({
+        children: [
+          ...runsA,
+          new TextRun({ text: "                    " }), // Spacer
+          ...runsB
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { line: 360, before: 60, after: 40 }
+      }));
+      docChildren.push(new Paragraph({
+        children: [
+          ...runsC,
+          new TextRun({ text: "                    " }),
+          ...runsD
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { line: 360, before: 40, after: 60 }
+      }));
+    } else {
+      // Case 3: 4 lines (1 option per line, default paragraphs)
+      docChildren.push(new Paragraph({ children: runsA, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 60, after: 40 } }));
+      docChildren.push(new Paragraph({ children: runsB, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 40 } }));
+      docChildren.push(new Paragraph({ children: runsC, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 40 } }));
+      docChildren.push(new Paragraph({ children: runsD, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 60 } }));
+    }
+  }
   
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -246,67 +346,15 @@ function convertMarkdownToDocx(markdownText) {
           next2 && next2.type === 'paragraph' && isOption(next2.text, 'C') &&
           next3 && next3.type === 'paragraph' && isOption(next3.text, 'D')) {
         
-        const textA = token.text;
-        const textB = next1.text;
-        const textC = next2.text;
-        const textD = next3.text;
+        const mcq = {
+          question: '', // Already rendered or none
+          optA: token.text,
+          optB: next1.text,
+          optC: next2.text,
+          optD: next3.text
+        };
         
-        // Strip tag markers to calculate exact text lengths
-        const cleanA = textA.replace(/<[^>]+>/g, '').replace(/\*/g, '');
-        const cleanB = textB.replace(/<[^>]+>/g, '').replace(/\*/g, '');
-        const cleanC = textC.replace(/<[^>]+>/g, '').replace(/\*/g, '');
-        const cleanD = textD.replace(/<[^>]+>/g, '').replace(/\*/g, '');
-        
-        const maxLength = Math.max(cleanA.length, cleanB.length, cleanC.length, cleanD.length);
-        
-        const runsA = parseInlineText(textA, 26, "000000", false);
-        const runsB = parseInlineText(textB, 26, "000000", false);
-        const runsC = parseInlineText(textC, 26, "000000", false);
-        const runsD = parseInlineText(textD, 26, "000000", false);
-        
-        if (maxLength <= 15) {
-          // Case 1: 1 line (All 4 options on a single line)
-          docChildren.push(new Paragraph({
-            children: [
-              ...runsA,
-              new TextRun({ text: "      " }),
-              ...runsB,
-              new TextRun({ text: "      " }),
-              ...runsC,
-              new TextRun({ text: "      " }),
-              ...runsD
-            ],
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { line: 360, before: 60, after: 60 }
-          }));
-        } else if (maxLength <= 35) {
-          // Case 2: 2 lines (2 options per line)
-          docChildren.push(new Paragraph({
-            children: [
-              ...runsA,
-              new TextRun({ text: "                    " }), // Spacer
-              ...runsB
-            ],
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { line: 360, before: 60, after: 40 }
-          }));
-          docChildren.push(new Paragraph({
-            children: [
-              ...runsC,
-              new TextRun({ text: "                    " }),
-              ...runsD
-            ],
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { line: 360, before: 40, after: 60 }
-          }));
-        } else {
-          // Case 3: 4 lines (1 option per line, default paragraphs)
-          docChildren.push(new Paragraph({ children: runsA, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 60, after: 40 } }));
-          docChildren.push(new Paragraph({ children: runsB, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 40 } }));
-          docChildren.push(new Paragraph({ children: runsC, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 40 } }));
-          docChildren.push(new Paragraph({ children: runsD, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 60 } }));
-        }
-        
+        renderMCQ(mcq);
         i += 3; // Skip next B, C, D tokens
         continue;
       }
@@ -375,7 +423,14 @@ function convertMarkdownToDocx(markdownText) {
       case 'paragraph': {
         const text = token.text;
         
-        // Check if paragraph contains "Gợi ý:" or "Hướng dẫn:" and split them if not already at the start
+        // 1. Check if the paragraph contains inline multiple choice options A., B., C., D.
+        const mcq = splitMCQParagraph(text);
+        if (mcq) {
+          renderMCQ(mcq);
+          break;
+        }
+
+        // 2. Check if paragraph contains "Gợi ý:" or "Hướng dẫn:" and split them if not already at the start
         let splitMarker = '';
         if (text.includes('**Gợi ý:**')) splitMarker = '**Gợi ý:**';
         else if (text.includes('Gợi ý:')) splitMarker = 'Gợi ý:';

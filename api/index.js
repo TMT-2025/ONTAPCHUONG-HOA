@@ -161,12 +161,13 @@ app.post('/api/generate-section', async (req, res) => {
         
         YÊU CẦU BẮT BUỘC VỀ DẤU TIẾNG VIỆT VÀ ĐỊNH DẠNG:
         - VIẾT HOÀN TOÀN BẰNG TIẾNG VIỆT CHUẨN CÓ ĐẦY ĐỦ DẤU (Ví dụ: phải viết 'Trong phản ứng', 'chất nào là chất khử', tuyệt đối không được viết không dấu kiểu 'Trong phan ung', 'chat nao la chat khu'). Quy định này áp dụng nghiêm ngặt cho tất cả các câu hỏi trắc nghiệm, tự luận và tóm tắt chương.
-        - Định dạng trắc nghiệm: Các phương án lựa chọn A, B, C, D phải bắt đầu ở một dòng mới và tuyệt đối KHÔNG ĐƯỢC đặt các ký tự gạch đầu dòng (*, -, •) ở trước chữ cái phương án. 
+        - Định dạng trắc nghiệm: CỰC KỲ QUAN TRỌNG, BẮT BUỘC từng phương án A., B., C., D. phải được viết ở các DÒNG RIÊNG BIỆT (xuống dòng mới hoàn toàn cho mỗi phương án, không được viết liền dòng với câu hỏi hay viết chung một dòng). Tuyệt đối KHÔNG ĐƯỢC đặt các ký tự gạch đầu dòng (*, -, •) ở trước chữ cái phương án.
           Ví dụ viết đúng:
-          A. Chất khử
-          <span style="color:red">B. Chất oxi hóa</span>
-          C. Môi trường
-          D. Tác nhân phản ứng
+          Câu 1: Nguyên tố nào là kim loại?
+          A. Natri
+          <span style="color:red">B. Clo</span>
+          C. Oxi
+          D. Nito
         - Định dạng tự luận/vận dụng: Phần "Gợi ý:" và "Hướng dẫn giải:" phải được xuống dòng mới riêng biệt ngay bên dưới câu hỏi/đề bài, không được viết liền dòng với câu hỏi.
         
         ${sharedInstructions}`;

@@ -68,9 +68,11 @@ app.post('/api/generate-section', async (req, res) => {
         
         Nội dung cần viết chi tiết, khoa học, giúp học sinh tự học định hướng rõ mục tiêu.
         
-        Lưu ý đặc biệt cho phần này:
-        - Chỉ phân chia mục tiêu thành: "1. Năng lực hóa học" và "2. Năng lực chung".
-        - TUYỆT ĐỐI KHÔNG ĐƯỢC tạo mục "3. Thái độ và giá trị" hoặc bất kỳ mục tiêu nào liên quan đến "Phẩm chất", "Thái độ", "Giá trị". Hãy bỏ hoàn toàn mục này.
+        Yêu cầu đặc biệt cho phần này:
+        - Phần "Mục tiêu, Kiến thức cần đạt" phải được chia làm đúng 2 nội dung lớn là:
+          1. **Mục tiêu**: trình bày rõ các mục tiêu cần hướng tới về mặt phát triển năng lực học sinh (bao gồm Năng lực hóa học và Năng lực chung).
+          2. **Kiến thức cần đạt**: liệt kê chi tiết các đơn vị kiến thức, yêu cầu cần đạt trọng tâm của chương mà học sinh cần phải nắm vững sau khi học xong.
+        - TUYỆT ĐỐI KHÔNG ĐƯỢC tạo thêm các mục tiêu liên quan đến "Thái độ và giá trị", "Phẩm chất", "Thái độ" hay bất kỳ nội dung nào khác ngoài 2 phần trên.
         
         ${sharedInstructions}`;
         break;

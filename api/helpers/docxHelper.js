@@ -16,24 +16,45 @@ const {
   PageBreak
 } = docx;
 
-// Helper: Convert digits/signs to Unicode subscripts
-const unicodeSub = {
-  '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
-  '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
-  '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎'
-};
+// Helper: Sanitize LaTeX math syntax and convert it to readable Unicode text
+function sanitizeMarkdown(text) {
+  if (!text) return '';
+  let clean = text;
+  
+  // 1. Replace standard LaTeX math commands with Unicode counterparts
+  clean = clean.replace(/\\Delta/g, 'Δ');
+  clean = clean.replace(/\\Sigma/g, 'Σ');
+  clean = clean.replace(/\\sum/g, 'Σ');
+  clean = clean.replace(/\\cdot/g, '·');
+  clean = clean.replace(/\\quad/g, '   ');
+  clean = clean.replace(/\\text\{\s*(.*?)\s*\}/g, '$1');
+  clean = clean.replace(/\\rightarrow/g, ' → ');
+  clean = clean.replace(/\\rightleftharpoons/g, ' ⇌ ');
+  clean = clean.replace(/\\to/g, ' → ');
+  
+  // 2. Parse LaTeX fractions: \frac{numerator}{denominator} -> (numerator / denominator)
+  clean = clean.replace(/\\frac\s*\{\s*(.*?)\s*\}\s*\{\s*(.*?)\s*\}/g, '($1 / $2)');
+  
+  // 3. Parse LaTeX subscript/superscript groupings:
+  // e.g., C_{12} -> C<sub>12</sub>  and  SO_4^{2-} -> SO<sub>4</sub><sup>2-</sup>
+  clean = clean.replace(/_\{([^}]+)\}/g, '<sub>$1</sub>');
+  clean = clean.replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>');
+  
+  // 4. Parse LaTeX single-character subscript/superscripts:
+  // e.g., H_2 -> H<sub>2</sub>  and  O^2 -> O<sup>2</sup>
+  // Only match characters immediately following _ or ^ if they are not already inside tags
+  clean = clean.replace(/_([a-zA-Z0-9+\-]+)(?![^<]*>)/g, '<sub>$1</sub>');
+  clean = clean.replace(/\^([a-zA-Z0-9+\-]+)(?![^<]*>)/g, '<sup>$1</sup>');
+  
+  // 5. Strip math environment dollar signs ($...$ and $$...$$)
+  clean = clean.replace(/\$\$(.*?)\$\$/g, '$1');
+  clean = clean.replace(/\$([^$]+)\$/g, '$1');
 
-// Helper: Convert digits/signs to Unicode superscripts
-const unicodeSup = {
-  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
-  '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
-  '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
-  'n': 'ⁿ'
-};
+  // 6. Strip empty tag artifacts that might result from translations
+  clean = clean.replace(/<sub><\/sub>/g, '');
+  clean = clean.replace(/<sup><\/sup>/g, '');
 
-function toUnicode(text, isSub) {
-  const map = isSub ? unicodeSub : unicodeSup;
-  return text.split('').map(char => map[char] || char).join('');
+  return clean;
 }
 
 // Function to recursively parse inline styles (bold, italic, sub, sup) in text
@@ -85,21 +106,21 @@ function parseInlineText(text) {
       runs.push(...innerRuns);
     } else if (token.startsWith('<sub>')) {
       const innerText = token.slice(5, -6);
-      const unicodeText = toUnicode(innerText, true);
+      // Removed toUnicode conversion to prevent double-shrinking.
+      // Set size: 28 (14pt) so that Word's auto-shrunk subscript is large and legible.
       runs.push(new TextRun({ 
-        text: unicodeText, 
+        text: innerText, 
         subScript: true, 
         font: "Times New Roman", 
-        size: 26 
+        size: 28 
       }));
     } else if (token.startsWith('<sup>')) {
       const innerText = token.slice(5, -6);
-      const unicodeText = toUnicode(innerText, false);
       runs.push(new TextRun({ 
-        text: unicodeText, 
+        text: innerText, 
         superScript: true, 
         font: "Times New Roman", 
-        size: 26 
+        size: 28 
       }));
     }
     
@@ -145,7 +166,9 @@ function createCalloutBox(contentParagraphs, type) {
 
 // Convert parsed Markdown tokens to docx components
 function convertMarkdownToDocx(markdownText) {
-  const tokens = lexer(markdownText);
+  // Apply sanitization to clear all LaTeX formatting before parsing
+  const sanitizedText = sanitizeMarkdown(markdownText);
+  const tokens = lexer(sanitizedText);
   const docChildren = [];
   let isFirstHeading1 = true;
   
@@ -270,7 +293,6 @@ function convertMarkdownToDocx(markdownText) {
           const itemText = item.text || '';
           const runs = [];
           
-          // Prepend bullet or numbers directly in text runs to avoid corrupting Word document references
           if (token.ordered) {
             runs.push(new TextRun({ text: `${index + 1}. `, bold: true, font: "Times New Roman", size: 26 }));
           } else {
@@ -302,7 +324,7 @@ function convertMarkdownToDocx(markdownText) {
                 alignment: AlignmentType.CENTER
               })
             ],
-            shading: { fill: 'E2E8F0' }, // Light blue-gray background
+            shading: { fill: 'E2E8F0' },
             margins: { top: 120, bottom: 120, left: 180, right: 180 }
           });
         });
@@ -318,7 +340,7 @@ function convertMarkdownToDocx(markdownText) {
                   alignment: AlignmentType.LEFT
                 })
               ],
-              shading: { fill: rowIndex % 2 === 0 ? 'FFFFFF' : 'F8FAFC' }, // Alternating rows
+              shading: { fill: rowIndex % 2 === 0 ? 'FFFFFF' : 'F8FAFC' },
               margins: { top: 100, bottom: 100, left: 140, right: 140 }
             });
           });
@@ -361,15 +383,15 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       {
         properties: {},
         children: [
-          new Paragraph({ text: "", spacing: { before: 1800 } }), // Top spacing
+          new Paragraph({ text: "", spacing: { before: 1800 } }),
           new Paragraph({
             children: [
               new TextRun({
                 text: "TÀI LIỆU ÔN TẬP CHƯƠNG",
                 font: "Times New Roman",
-                size: 32, // 16pt
+                size: 32,
                 bold: true,
-                color: "718096" // Slate gray
+                color: "718096"
               })
             ],
             alignment: AlignmentType.CENTER
@@ -380,9 +402,9 @@ function generateDocx(grade, chapterTitle, markdownContent) {
               new TextRun({
                 text: chapterTitle.toUpperCase(),
                 font: "Times New Roman",
-                size: 72, // 36pt
+                size: 72,
                 bold: true,
-                color: "1A365D" // Premium dark blue
+                color: "1A365D"
               })
             ],
             alignment: AlignmentType.CENTER
@@ -393,7 +415,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
               new TextRun({
                 text: `Chương trình Hóa học Lớp ${grade}`,
                 font: "Times New Roman",
-                size: 36, // 18pt
+                size: 36,
                 italic: true,
                 color: "4A5568"
               })
@@ -405,20 +427,20 @@ function generateDocx(grade, chapterTitle, markdownContent) {
               new TextRun({
                 text: "Bộ sách: Kết nối tri thức với cuộc sống",
                 font: "Times New Roman",
-                size: 28, // 14pt
+                size: 28,
                 color: "4A5568"
               })
             ],
             alignment: AlignmentType.CENTER,
             spacing: { before: 120 }
           }),
-          new Paragraph({ text: "", spacing: { before: 3600 } }), // Large spacing down
+          new Paragraph({ text: "", spacing: { before: 3600 } }),
           new Paragraph({
             children: [
               new TextRun({
                 text: `Ngày biên soạn: ${today}`,
                 font: "Times New Roman",
-                size: 24, // 12pt
+                size: 24,
                 color: "718096"
               })
             ],
@@ -429,7 +451,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
               new TextRun({
                 text: "Ứng dụng Chemistry Chapter Review Generator (AI Powered)",
                 font: "Times New Roman",
-                size: 20, // 10pt
+                size: 20,
                 italic: true,
                 color: "A0AEC0"
               })
@@ -449,7 +471,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
               new TextRun({
                 text: "Mục lục tự động",
                 font: "Times New Roman",
-                size: 36, // 18pt
+                size: 36,
                 bold: true,
                 color: "1A365D"
               })
@@ -465,7 +487,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
               new TextRun({
                 text: "Lưu ý: Sau khi mở file Word, vui lòng nhấn chuột phải vào vùng mục lục ở trên và chọn 'Update Field' để hiển thị đầy đủ số trang chính xác.",
                 font: "Times New Roman",
-                size: 20, // 10pt
+                size: 20,
                 italic: true,
                 color: "718096"
               })

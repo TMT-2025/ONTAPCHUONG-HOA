@@ -782,6 +782,27 @@ function generateDocx(grade, chapterTitle, markdownContent) {
             hyperlink: true,
             headingStyleRange: "1-3"
           }),
+          new Paragraph({ spacing: { before: 240 } }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Lưu ý: ",
+                bold: true,
+                italic: true,
+                color: "FF0000",
+                font: "Times New Roman",
+                size: 22
+              }),
+              new TextRun({
+                text: "Sau khi mở file Word, vui lòng nhấn chuột phải vào vùng mục lục ở trên và chọn 'Update Field' để hiển thị đầy đủ số trang chính xác.",
+                italic: true,
+                color: "4A5568",
+                font: "Times New Roman",
+                size: 22
+              })
+            ],
+            spacing: { before: 120, after: 120 }
+          }),
           new Paragraph({ children: [new PageBreak()] })
         ]
       },

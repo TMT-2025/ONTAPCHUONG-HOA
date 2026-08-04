@@ -35,7 +35,7 @@ app.get('/api/curriculum', (req, res) => {
 
 // 2. POST /api/generate-section - Calls Gemini to generate a single section
 app.post('/api/generate-section', async (req, res) => {
-  const { grade, chapterId, sectionType, lessonName, customApiKey, customModel } = req.body;
+  const { grade, chapterId, sectionType, lessonName, customApiKey, customModel, programType = 'standard' } = req.body;
 
   const apiKey = customApiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -44,7 +44,8 @@ app.post('/api/generate-section', async (req, res) => {
 
   const modelName = customModel || "gemini-3.1-flash-lite";
 
-  const gradeData = curriculum[grade];
+  const targetProgram = curriculum[programType] ? programType : 'standard';
+  const gradeData = curriculum[targetProgram]?.[grade];
   if (!gradeData) {
     return res.status(400).json({ error: "Lớp không hợp lệ." });
   }
@@ -177,13 +178,14 @@ app.post('/api/generate-section', async (req, res) => {
 
 // 3. POST /api/export-docx - Converts accumulated markdown into a Word doc and returns buffer
 app.post('/api/export-docx', async (req, res) => {
-  const { grade, chapterId, markdownContent } = req.body;
+  const { grade, chapterId, markdownContent, programType = 'standard' } = req.body;
 
   if (!markdownContent) {
     return res.status(400).json({ error: "Thiếu nội dung tài liệu để xuất." });
   }
 
-  const gradeData = curriculum[grade];
+  const targetProgram = curriculum[programType] ? programType : 'standard';
+  const gradeData = curriculum[targetProgram]?.[grade];
   let chapterTitle = "Tài liệu ôn tập";
   if (gradeData) {
     const chapter = gradeData.chapters.find(c => c.id === parseInt(chapterId));

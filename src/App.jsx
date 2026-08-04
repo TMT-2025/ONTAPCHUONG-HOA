@@ -18,6 +18,7 @@ import {
 
 function App() {
   const [curriculumData, setCurriculumData] = useState(null);
+  const [programType, setProgramType] = useState('standard');
   const [grade, setGrade] = useState('10');
   const [chapterId, setChapterId] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -59,9 +60,9 @@ function App() {
       .then(res => res.json())
       .then(data => {
         setCurriculumData(data);
-        // Default to first chapter
-        if (data['10']?.chapters?.length > 0) {
-          setChapterId(data['10'].chapters[0].id.toString());
+        // Default to first chapter of standard program
+        if (data.standard?.['10']?.chapters?.length > 0) {
+          setChapterId(data.standard['10'].chapters[0].id.toString());
         }
       })
       .catch(err => {
@@ -72,8 +73,15 @@ function App() {
   // Handle grade change and update chapters
   const handleGradeChange = (g) => {
     setGrade(g);
-    if (curriculumData && curriculumData[g]?.chapters?.length > 0) {
-      setChapterId(curriculumData[g].chapters[0].id.toString());
+    if (curriculumData && curriculumData[programType]?.[g]?.chapters?.length > 0) {
+      setChapterId(curriculumData[programType][g].chapters[0].id.toString());
+    }
+  };
+
+  const handleProgramTypeChange = (pType) => {
+    setProgramType(pType);
+    if (curriculumData && curriculumData[pType]?.[grade]?.chapters?.length > 0) {
+      setChapterId(curriculumData[pType][grade].chapters[0].id.toString());
     }
   };
 
@@ -92,8 +100,8 @@ function App() {
       return;
     }
 
-    const currentGradeChapters = curriculumData[grade]?.chapters;
-    const activeChapter = currentGradeChapters.find(c => c.id === parseInt(chapterId));
+    const currentGradeChapters = curriculumData[programType]?.[grade]?.chapters;
+    const activeChapter = currentGradeChapters?.find(c => c.id === parseInt(chapterId));
     if (!activeChapter) return;
 
     setIsGenerating(true);
@@ -122,7 +130,8 @@ function App() {
           chapterId,
           sectionType: 'intro',
           customApiKey: apiKey,
-          customModel: modelName
+          customModel: modelName,
+          programType
         })
       });
       
@@ -154,7 +163,8 @@ function App() {
             sectionType: 'lesson',
             lessonName: lesson,
             customApiKey: apiKey,
-            customModel: modelName
+            customModel: modelName,
+            programType
           })
         });
         
@@ -182,7 +192,8 @@ function App() {
           chapterId,
           sectionType: 'summary_mindmap',
           customApiKey: apiKey,
-          customModel: modelName
+          customModel: modelName,
+          programType
         })
       });
       
@@ -209,7 +220,8 @@ function App() {
           chapterId,
           sectionType: 'exercises',
           customApiKey: apiKey,
-          customModel: modelName
+          customModel: modelName,
+          programType
         })
       });
       
@@ -236,7 +248,8 @@ function App() {
           chapterId,
           sectionType: 'mistakes_tips',
           customApiKey: apiKey,
-          customModel: modelName
+          customModel: modelName,
+          programType
         })
       });
       
@@ -263,7 +276,8 @@ function App() {
           chapterId,
           sectionType: 'tests_checklist',
           customApiKey: apiKey,
-          customModel: modelName
+          customModel: modelName,
+          programType
         })
       });
       
@@ -308,7 +322,8 @@ function App() {
         body: JSON.stringify({
           grade,
           chapterId,
-          markdownContent: mdContent
+          markdownContent: mdContent,
+          programType
         })
       });
 
@@ -348,7 +363,7 @@ function App() {
   }, [accumulatedMarkdown]);
 
   // Find active chapter details
-  const activeChapterData = curriculumData?.[grade]?.chapters?.find(c => c.id === parseInt(chapterId));
+  const activeChapterData = curriculumData?.[programType]?.[grade]?.chapters?.find(c => c.id === parseInt(chapterId));
 
   return (
     <div class="relative min-h-screen bg-slate-950 bg-radial-glow bg-radial-blue-glow bg-radial-purple-glow pb-20">
@@ -466,9 +481,40 @@ function App() {
                 </div>
               </div>
 
+              {/* Program Type Selector */}
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Loại chương trình</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleProgramTypeChange('standard')}
+                    disabled={isGenerating}
+                    class={`py-2 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
+                      programType === 'standard' 
+                        ? 'bg-gradient-to-tr from-teal-500/20 to-emerald-400/10 border-teal-500 text-teal-200 shadow-md shadow-teal-500/5' 
+                        : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    Chương trình cốt lõi
+                  </button>
+                  <button
+                    onClick={() => handleProgramTypeChange('topics')}
+                    disabled={isGenerating}
+                    class={`py-2 px-3 rounded-lg border font-bold text-xs tracking-wide transition-all ${
+                      programType === 'topics' 
+                        ? 'bg-gradient-to-tr from-teal-500/20 to-emerald-400/10 border-teal-500 text-teal-200 shadow-md shadow-teal-500/5' 
+                        : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    Chuyên đề học tập
+                  </button>
+                </div>
+              </div>
+
               {/* Chapter Selector */}
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chọn chương ôn tập</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  {programType === 'topics' ? 'Chọn chuyên đề ôn tập' : 'Chọn chương ôn tập'}
+                </label>
                 <select
                   value={chapterId}
                   onChange={(e) => setChapterId(e.target.value)}
@@ -476,9 +522,9 @@ function App() {
                   class="w-full px-3 py-2.5 bg-slate-900/60 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-teal-500 font-medium text-sm"
                 >
                   {!curriculumData && <option>Đang tải danh sách chương...</option>}
-                  {curriculumData && curriculumData[grade]?.chapters.map(c => (
+                  {curriculumData && curriculumData[programType]?.[grade]?.chapters.map(c => (
                     <option key={c.id} value={c.id}>
-                      Chương {c.id}: {c.title}
+                      {programType === 'topics' ? `Chuyên đề ${c.id}: ${c.title}` : `Chương ${c.id}: ${c.title}`}
                     </option>
                   ))}
                 </select>

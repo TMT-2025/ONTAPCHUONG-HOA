@@ -380,14 +380,10 @@ function convertMarkdownToDocx(markdownText) {
           size = 32; // 16pt
           before = 360;
           after = 180;
+          color = 'EE0000'; // All Heading 1 are RED
           
           if (upperText.includes("CHƯƠNG")) {
-            color = 'FF0000'; // Red
-            alignment = AlignmentType.CENTER; // Center the Chapter Title!
-          } else if (upperText.includes("BÀI") || upperText.includes("TỔNG HỢP KIẾN THỨC") || upperText.includes("TÀI LIỆU ÔN TẬP")) {
-            color = '0056B3'; // Blue
-          } else {
-            color = 'FF0000'; // Red
+            alignment = AlignmentType.CENTER; // Center the Chapter Title
           }
           
           // PageBreak before Heading 1, except for the first one
@@ -398,21 +394,47 @@ function convertMarkdownToDocx(markdownText) {
         } else if (token.depth === 2) {
           level = HeadingLevel.HEADING_2;
           size = 28; // 14pt
-          color = '0056B3'; // Blue (all Heading 2 are blue)
           before = 240;
           after = 120;
-        } else {
+          
+          if (upperText.includes("NHẬN BIẾT")) {
+            color = 'FF00FF'; // Magenta
+          } else if (upperText.includes("THÔNG HIỂU")) {
+            color = '2E7D32'; // Green
+          } else if (upperText.includes("VẬN DỤNG")) {
+            color = 'FF0000'; // Red
+          } else {
+            color = '0033CC'; // Blue (Heading 2 is blue)
+          }
+        } else if (token.depth === 3) {
           level = HeadingLevel.HEADING_3;
           size = 26; // 13pt
           before = 180;
           after = 90;
           
-          if (upperText.includes("NHẬN BIẾT") || upperText.includes("VẬN DỤNG")) {
-            color = 'FF0000'; // Red
+          if (upperText.includes("NHẬN BIẾT")) {
+            color = 'FF00FF'; // Magenta
           } else if (upperText.includes("THÔNG HIỂU")) {
             color = '2E7D32'; // Green
+          } else if (upperText.includes("VẬN DỤNG")) {
+            color = 'FF0000'; // Red
           } else {
-            color = '0056B3'; // Blue (Default heading color)
+            color = '0033CC'; // Blue (Heading 3 is blue)
+          }
+        } else {
+          level = HeadingLevel.HEADING_4;
+          size = 24; // 12pt
+          before = 120;
+          after = 60;
+          
+          if (upperText.includes("NHẬN BIẾT")) {
+            color = 'FF00FF'; // Magenta
+          } else if (upperText.includes("THÔNG HIỂU")) {
+            color = '2E7D32'; // Green
+          } else if (upperText.includes("VẬN DỤNG")) {
+            color = 'FF0000'; // Red
+          } else {
+            color = '0033CC'; // Blue (Heading 4 is blue)
           }
         }
         

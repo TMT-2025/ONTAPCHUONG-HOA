@@ -64,7 +64,8 @@ app.post('/api/generate-section', async (req, res) => {
     let prompt = "";
 
     switch (sectionType) {
-      case 'intro':
+      case 'intro': {
+        const uppercaseTitle = chapter.title.toUpperCase();
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Giới thiệu chương** và **Mục tiêu, Kiến thức cần đạt** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
@@ -72,98 +73,154 @@ app.post('/api/generate-section', async (req, res) => {
         
         Nội dung cần viết ngắn gọn, khoa học, súc tích giúp học sinh tự học định hướng nhanh mục tiêu.
         
-        Yêu cầu đặc biệt cho phần này:
-        - Phần "Mục tiêu, Kiến thức cần đạt" phải được chia làm đúng 2 nội dung lớn là:
-          1. **Mục tiêu**: trình bày thật ngắn gọn, cô đọng mục tiêu cần hướng tới về mặt phát triển năng lực học sinh (bao gồm Năng lực hóa học và Năng lực chung).
-          2. **Kiến thức cần đạt**: liệt kê cực kỳ ngắn gọn các đơn vị kiến thức trọng tâm cốt lõi nhất của chương học sinh cần nắm vững.
-        - YÊU CẦU ĐỘ DÀI: Do đây là tài liệu ôn tập, hãy viết cực kỳ ngắn gọn và cô đọng. Độ dài của phần "Mục tiêu" chỉ trong khoảng 30 - 60 chữ. Độ dài của phần "Kiến thức cần đạt" cũng chỉ trong khoảng 30 - 60 chữ. Tuyệt đối không được viết dài dòng giải thích dông dài.
-        - TUYỆT ĐỐI KHÔNG ĐƯỢC tạo thêm các mục tiêu liên quan đến "Thái độ và giá trị", "Phẩm chất", "Thái độ" hay bất kỳ nội dung nào khác ngoài 2 phần trên.
+        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        - Bắt đầu tài liệu bằng tiêu đề chương viết hoa định dạng Heading 1:
+          # CHƯƠNG ${chapter.id}: ${uppercaseTitle}
+        - Tiếp theo là phần giới thiệu chương định dạng Heading 2:
+          ## I. GIỚI THIỆU CHƯƠNG
+          (Viết đoạn văn ngắn giới thiệu bối cảnh chương học)
+        - Tiếp theo là phần mục tiêu định dạng Heading 2:
+          ## II. MỤC TIÊU, KIẾN THỨC CẦN ĐẠT
+          - Viết tiêu đề nhỏ định dạng Heading 3:
+            ### Mục tiêu
+            (Nêu ngắn gọn mục tiêu phát triển năng lực hóa học và năng lực chung trong khoảng 30 - 60 chữ)
+          - Viết tiêu đề nhỏ định dạng Heading 3:
+            ### Kiến thức cần đạt
+            (Nêu ngắn gọn các yêu cầu kiến thức cốt lõi cần đạt trong khoảng 30 - 60 chữ)
+        - TUYỆT ĐỐI KHÔNG ĐƯỢC tạo thêm các mục tiêu liên quan đến "Thái độ và giá trị", "Phẩm chất", "Thái độ" hay bất kỳ nội dung nào khác ngoài các phần trên.
         
         ${sharedInstructions}`;
         break;
+      }
 
-      case 'lesson':
+      case 'lesson': {
+        const { isFirstLesson } = req.body;
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Kiến thức trọng tâm chi tiết** cho bài học:
         - Bài học: ${lessonName}
         - Thuộc chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung của bài học phải cực kỳ đầy đủ, chi tiết để học sinh tự học. Vui lòng viết tất cả các nội dung sau (nếu bài học có):
-        1. Khái niệm (Định nghĩa rõ ràng, chính xác)
-        2. Bản chất (Giải thích ở cấp độ nguyên tử, phân tử, cấu tạo electron hoặc liên kết)
-        3. Giải thích hiện tượng hoặc cơ chế
-        4. Điều kiện xảy ra phản ứng hoặc các quy luật liên quan
-        5. Đặc điểm cấu tạo hoặc liên kết hóa học
-        6. Tính chất hóa học và vật lý (kèm đầy đủ các phương trình phản ứng hóa học minh họa chính xác)
-        7. Ví dụ minh họa thực tế chi tiết
-        8. Lưu ý quan trọng (Định dạng như một đoạn văn bắt đầu bằng '**Lưu ý:**')
-        9. Điều cần nhớ (Tóm tắt lại các ý quan trọng nhất cần học thuộc lòng)
+        Nội dung của bài học phải cực kỳ đầy đủ, chi tiết để học sinh tự học.
+        
+        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        ${isFirstLesson ? `- Do đây là bài học đầu tiên trong chương, bạn PHẢI bắt đầu bằng tiêu đề lớn định dạng Heading 1:
+          # III. NỘI DUNG KIẾN THỨC` : ''}
+        - Tên bài học phải định dạng Heading 2:
+          ## ${lessonName}
+        - Các mục nội dung bên dưới bài học phải định dạng Heading 3:
+          ### Khái niệm
+          (Trình bày khái niệm, định nghĩa)
+          ### Bản chất
+          (Giải thích bản chất, cấu tạo, cơ chế phản ứng)
+          (Và các mục kiến thức khác nếu có như: Tính chất hóa học, Tính chất vật lý, Ví dụ minh họa thực tế...)
+        
+        Với mỗi mục lớn (Khái niệm, Bản chất...), vui lòng viết chi tiết, khoa học, kèm đầy đủ phương trình phản ứng hóa học (thẻ HTML sub/sup) và ví dụ thực tế.
         
         ${sharedInstructions}`;
         break;
+      }
 
-      case 'summary_mindmap':
+      case 'summary_mindmap': {
+        const uppercaseTitle = chapter.title.toUpperCase();
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Tổng hợp công thức, Quy tắc và Bảng tổng hợp kiến thức** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung biên soạn phải bao gồm:
-        1. Các công thức hóa học/toán học quan trọng cần nhớ trong chương (Ví dụ: tính số mol, nồng độ, biến thiên enthalpy, tốc độ phản ứng...), nếu có.
-        2. Các quy tắc quan trọng của chương (Ví dụ: quy tắc octet, quy tắc gọi tên, quy tắc an toàn...), nếu có.
-        3. Bảng tổng hợp so sánh hoặc hệ thống hóa kiến thức trọng tâm của chương (Bắt buộc sử dụng định dạng bảng Markdown).
+        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
+          # IV - TỔNG HỢP KIẾN THỨC CHƯƠNG ${chapter.id}: ${uppercaseTitle} - HÓA HỌC ${grade} (KẾT NỐI TRI THỨC VỚI CUỘC SỐNG)
+        - Tiếp theo, trình bày các nội dung con định dạng Heading 2:
+          ## 1. CÁC CÔNG THỨC HÓA HỌC VÀ TOÁN HỌC QUAN TRỌNG TRONG CHƯƠNG
+          (Liệt kê chi tiết các công thức toán học/hóa học, chú thích đại lượng và đơn vị)
+          ## 2. CÁC QUY TẮC VÀ ĐỊNH LUẬT QUAN TRỌNG TRONG CHƯƠNG
+          (Nêu rõ các định luật, quy tắc của chương, ví dụ định luật tác dụng khối lượng, quy tắc Van 't Hoff...)
+          ## 3. BẢNG TỔNG HỢP KIẾN THỨC TRỌNG TÂM CHƯƠNG ${uppercaseTitle}
+          (Bảng so sánh hệ thống hóa kiến thức trọng tâm dạng bảng Markdown)
         
-        Lưu ý đặc biệt cho phần này:
-        - TUYỆT ĐỐI KHÔNG ĐƯỢC tạo mục "Sơ đồ tư duy" (dạng văn bản hay bất kỳ dạng nào khác). Bỏ hoàn toàn mục này.
+        Lưu ý: TUYỆT ĐỐI KHÔNG ĐƯỢC tạo mục "Sơ đồ tư duy" (dạng văn bản hay bất kỳ dạng nào khác). Bỏ hoàn toàn mục này.
         
         ${sharedInstructions}`;
         break;
+      }
 
-      case 'exercises':
+      case 'exercises': {
+        const uppercaseTitle = chapter.title.toUpperCase();
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy viết tài liệu ôn tập phần **Các dạng bài tập ôn tập tiêu biểu** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung cần bao gồm các dạng bài tập điển hình nhất của chương. 
-        CẤU TRÚC TRÌNH BÀY BẮT BUỘC CHO MỖI DẠNG BÀI TẬP:
-        Với mỗi dạng bài tập, hãy trình bày các phần nhỏ theo thứ tự tăng dần chính xác như sau:
-        1. Dấu hiệu nhận biết dạng bài (Bắt đầu bằng tiêu đề dòng: "1. Dấu hiệu nhận biết dạng bài")
-        2. Phương pháp giải chi tiết (Bắt đầu bằng tiêu đề dòng: "2. Phương pháp giải chi tiết")
-        3. Ví dụ mẫu minh họa (Bắt đầu bằng tiêu đề dòng: "3. Ví dụ mẫu minh họa" hoặc "3. Các ví dụ minh họa")
-        Tuyệt đối KHÔNG ĐƯỢC đánh số thứ tự sai lệch (ví dụ dùng chung số thứ tự "1." cho các mục này).
+        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
+          # V - TÀI LIỆU ÔN TẬP CHƯƠNG ${chapter.id}: ${uppercaseTitle} - HÓA HỌC ${grade} (KẾT NỐI TRI THỨC)
+        - Tiếp theo là tiêu đề phụ Heading 1:
+          # CÁC DẠNG BÀI TẬP ÔN TẬP TIÊU BIỂU
+        - Trình bày mỗi dạng bài tập bắt đầu bằng tiêu đề dạng bài định dạng Heading 2:
+          ## DẠNG [Số thứ tự]: [TÊN DẠNG BÀI]
+          (Ví dụ: ## DẠNG 1: TÍNH TỐC ĐỘ TRUNG BÌNH CỦA PHẢN ỨNG HÓA HỌC)
+        - Bên dưới mỗi dạng bài tập, hãy trình bày các phần nhỏ bắt đầu bằng Heading 3:
+          ### 1. Dấu hiệu nhận biết dạng bài
+          (Nêu các dấu hiệu đặc trưng để nhận biết đề bài thuộc dạng này)
+          ### 2. Phương pháp giải chi tiết
+          (Trình bày chi tiết các bước giải tổng quát từ Bước 1, Bước 2...)
+          ### 3. Ví dụ mẫu minh họa
+          (Đưa ra ít nhất 2 ví dụ mẫu có lời giải chi tiết và phương trình phản ứng cụ thể)
+        
+        Tuyệt đối không được đánh số thứ tự sai lệch hoặc dùng chung số thứ tự "1." cho các đề mục con dưới dạng bài.
         
         ${sharedInstructions}`;
         break;
+      }
 
-      case 'mistakes_tips':
+      case 'mistakes_tips': {
+        const uppercaseTitle = chapter.title.toUpperCase();
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Các lỗi sai thường gặp, Mẹo ghi nhớ nhanh và Liên hệ thực tiễn** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung bao gồm:
-        1. Các lỗi sai lý thuyết hoặc lỗi tính toán mà học sinh thường mắc phải trong chương này, kèm giải thích tại sao sai và cách khắc phục.
-        2. Mẹo ghi nhớ nhanh kiến thức, mẹo tính nhanh hoặc thơ vui nhớ kiến thức (Định dạng như một đoạn văn bắt đầu bằng '**Mẹo ghi nhớ:**').
-        3. Liên hệ thực tiễn và ứng dụng đời sống: các hiện tượng thực tế giải thích bằng kiến thức của chương này (Ví dụ: sự ăn mòn kim loại trong đời sống, ứng dụng các chất...).
+        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
+          # VI - CÁC LỖI SAI THƯỜNG GẶP, MẸO GHI NHỚ NHANH VÀ LIÊN HỆ THỰC TIỄN - CHƯƠNG ${chapter.id}: ${uppercaseTitle} (HÓA HỌC ${grade} - KẾT NỐI TRI THỨC)
+        - Tiếp theo, trình bày các nội dung con định dạng Heading 2:
+          ## 1. CÁC LỖI SAI THƯỜNG GẶP CỦA HỌC SINH
+          (Liệt kê các lỗi sai lý thuyết/tính toán hay gặp và cách khắc phục)
+          ## 2. MẸO GHI NHỚ NHANH
+          (Định dạng đoạn thơ hoặc mẹo ghi nhớ nhanh, bắt đầu bằng '**Mẹo ghi nhớ:**')
+          ## 3. LIÊN HỆ THỰC TIỄN VÀ ỨNG DỤNG ĐỜI SỐNG
+          (Các ứng dụng thực tế, giải thích hiện tượng hóa học đời sống liên quan)
         
         ${sharedInstructions}`;
         break;
+      }
 
-      case 'tests_checklist':
+      case 'tests_checklist': {
+        const uppercaseTitle = chapter.title.toUpperCase();
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Câu hỏi tự kiểm tra tự luận/trắc nghiệm, Checklist tự đánh giá và Tóm tắt chương** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung bao gồm:
-        1. Hệ thống câu hỏi tự kiểm tra đánh giá năng lực học sinh (CUNG CẤP CÂU HỎI KÈM ĐÁP ÁN ĐỎ):
-           - Nhận biết: Ít nhất 5 câu hỏi trắc nghiệm khách quan. Mỗi câu hỏi phải có đầy đủ 4 phương án lựa chọn (A, B, C, D). Bắt buộc phương án đúng phải được bôi đỏ bằng cách bao quanh trong thẻ HTML <span style="color:red">A. Phương án đúng</span>.
-           - Thông hiểu: Ít nhất 3 câu tự luận giải thích hiện tượng hóa học. Bắt buộc phần gợi ý trả lời phải được viết ở một dòng mới (dòng riêng biệt) ngay phía dưới câu hỏi và bắt đầu bằng "Gợi ý: ...". Bôi đỏ từ khóa quan trọng hoặc đáp án gợi ý bằng thẻ <span style="color:red">từ khóa</span>.
-           - Vận dụng/Vận dụng cao: Ít nhất 2 bài tập tính toán định lượng hoặc tình huống thực tế giải quyết vấn đề. Bắt buộc phần hướng dẫn giải phải được viết ở một dòng mới (dòng riêng biệt) ngay phía dưới đề bài và bắt đầu bằng "Hướng dẫn giải: ...". Bôi đỏ đáp số cuối cùng bằng thẻ <span style="color:red">đáp số</span>.
-        2. Checklist tự đánh giá kiến thức: Bảng tự đánh giá với danh sách các kiến thức cốt lõi (Bắt buộc dùng định dạng bảng Markdown có các cột: 'Nội dung kiến thức', 'Đã vững', 'Cần ôn lại', 'Ghi chú').
-        3. Tóm tắt chương (1-2 đoạn văn ngắn gọn khái quát tinh thần của cả chương).
+        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
+          # VII - HỆ THỐNG CÂU HỎI VÀ TÀI LIỆU ÔN TẬP CHƯƠNG ${chapter.id}: ${uppercaseTitle} - HÓA HỌC ${grade} (KẾT NỐI TRI THỨC)
+        - Tiếp theo là tiêu đề phụ định dạng Heading 2:
+          ## PHẦN 1: HỆ THỐNG CÂU HỎI TỰ KIỂM TRA ĐÁNH GIÁ NĂNG LỰC
+        - Trình bày câu hỏi theo các mức độ định dạng Heading 3:
+          ### I. Mức độ Nhận biết
+          (Ít nhất 5 câu hỏi trắc nghiệm A, B, C, D. Tô đỏ phương án đúng bằng <span style="color:red">A. Đáp án</span>. Mỗi phương án bắt đầu ở dòng mới sát lề trái, tuyệt đối không dùng gạch đầu dòng hay dấu sao.)
+          ### II. Mức độ Thông hiểu
+          (Ít nhất 3 câu tự luận kèm Gợi ý trả lời chi tiết. Gợi ý trả lời viết xuống dòng bắt đầu bằng "Gợi ý: ...", bọc từ khóa đỏ bằng <span style="color:red">...</span>)
+          ### III. Mức độ Vận dụng và Vận dụng cao
+          (Ít nhất 2 bài tập tính toán có hướng dẫn giải. Hướng dẫn giải viết xuống dòng bắt đầu bằng "Hướng dẫn giải: ...", bọc đáp số đỏ bằng <span style="color:red">...</span>)
+        - Tiếp theo là phần tự đánh giá định dạng Heading 2:
+          ## PHẦN 2: CHECKLIST TỰ ĐÁNH GIÁ KIẾN THỨC
+          (Bảng tự đánh giá với các cột: Nội dung kiến thức, Đã vững, Cần ôn lại, Ghi chú)
+        - Tiếp theo là phần tóm tắt chương định dạng Heading 2:
+          ## PHẦN 3: TÓM TẮT CHƯƠNG ${chapter.id} - ${uppercaseTitle}
+          (Đoạn văn ngắn khái quát tinh thần của cả chương)
         
         YÊU CẦU BẮT BUỘC VỀ DẤU TIẾNG VIỆT VÀ ĐỊNH DẠNG:
         - VIẾT HOÀN TOÀN BẰNG TIẾNG VIỆT CHUẨN CÓ ĐẦY ĐỦ DẤU (Ví dụ: phải viết 'Trong phản ứng', 'chất nào là chất khử', tuyệt đối không được viết không dấu kiểu 'Trong phan ung', 'chat nao la chat khu'). Quy định này áp dụng nghiêm ngặt cho tất cả các câu hỏi trắc nghiệm, tự luận và tóm tắt chương.
@@ -178,6 +235,7 @@ app.post('/api/generate-section', async (req, res) => {
         
         ${sharedInstructions}`;
         break;
+      }
 
       default:
         return res.status(400).json({ error: "Loại phần sinh nội dung không hợp lệ." });

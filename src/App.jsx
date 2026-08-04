@@ -172,7 +172,8 @@ function App() {
             lessonName: lesson,
             customApiKey: apiKey,
             customModel: modelName,
-            programType
+            programType,
+            isFirstLesson: i === 0
           })
         });
         

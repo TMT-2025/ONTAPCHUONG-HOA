@@ -368,8 +368,12 @@ function App() {
     a.download = `Tai-lieu-on-tap-Chuong-${chapterId}-Hoa-${grade}.docx`;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    
+    // Delay revocation to prevent browsers from cancelling the download of larger files
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 200);
   };
 
   // Scroll live preview window down automatically

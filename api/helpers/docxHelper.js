@@ -417,6 +417,13 @@ function generateDocx(grade, chapterTitle, markdownContent) {
   const today = new Date().toLocaleDateString('vi-VN');
   const pageHeader = createPageNumberHeader();
   
+  const pageMargins = {
+    top: 1134,   // 2cm in twips (dxa)
+    bottom: 1134,
+    left: 1134,
+    right: 1134
+  };
+  
   return new Document({
     features: {
       updateFields: true
@@ -425,7 +432,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       // 1. COVER PAGE (with page number 1 in header as in PDF)
       {
         headers: pageHeader,
-        properties: {},
+        margins: pageMargins,
         children: [
           new Paragraph({ text: "", spacing: { before: 1800 } }),
           new Paragraph({
@@ -509,7 +516,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       // 2. TABLE OF CONTENTS (with page number 2 in header)
       {
         headers: pageHeader,
-        properties: {},
+        margins: pageMargins,
         children: [
           new Paragraph({
             children: [
@@ -533,7 +540,7 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       // 3. CORE DOCUMENT CONTENT (with page numbers 3, 4, 5... in header)
       {
         headers: pageHeader,
-        properties: {},
+        margins: pageMargins,
         children: parsedContent
       }
     ]

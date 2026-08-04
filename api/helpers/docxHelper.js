@@ -469,7 +469,11 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       // 1. COVER PAGE (with page number 1 in header as in PDF)
       {
         headers: pageHeader,
-        margins: pageMargins,
+        properties: {
+          page: {
+            margin: pageMargins
+          }
+        },
         children: [
           new Paragraph({ text: "", spacing: { before: 1800 } }),
           new Paragraph({
@@ -553,7 +557,11 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       // 2. TABLE OF CONTENTS (with page number 2 in header)
       {
         headers: pageHeader,
-        margins: pageMargins,
+        properties: {
+          page: {
+            margin: pageMargins
+          }
+        },
         children: [
           new Paragraph({
             children: [
@@ -577,7 +585,11 @@ function generateDocx(grade, chapterTitle, markdownContent) {
       // 3. CORE DOCUMENT CONTENT (with page numbers 3, 4, 5... in header)
       {
         headers: pageHeader,
-        margins: pageMargins,
+        properties: {
+          page: {
+            margin: pageMargins
+          }
+        },
         children: parsedContent
       }
     ]

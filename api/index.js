@@ -154,8 +154,8 @@ app.post('/api/generate-section', async (req, res) => {
         Nội dung bao gồm:
         1. Hệ thống câu hỏi tự kiểm tra đánh giá năng lực học sinh (CUNG CẤP CÂU HỎI KÈM ĐÁP ÁN ĐỎ):
            - Nhận biết: Ít nhất 5 câu hỏi trắc nghiệm khách quan. Mỗi câu hỏi phải có đầy đủ 4 phương án lựa chọn (A, B, C, D). Bắt buộc phương án đúng phải được bôi đỏ bằng cách bao quanh trong thẻ HTML <span style="color:red">A. Phương án đúng</span>.
-           - Thông hiểu: Ít nhất 3 câu tự luận giải thích hiện tượng hóa học, kèm gợi ý trả lời chi tiết. Bôi đỏ từ khóa quan trọng hoặc đáp án gợi ý bằng thẻ <span style="color:red">từ khóa</span>.
-           - Vận dụng/Vận dụng cao: Ít nhất 2 bài tập tính toán định lượng hoặc tình huống thực tế giải quyết vấn đề, kèm hướng dẫn giải chi tiết. Bôi đỏ đáp số cuối cùng bằng thẻ <span style="color:red">đáp số</span>.
+           - Thông hiểu: Ít nhất 3 câu tự luận giải thích hiện tượng hóa học. Bắt buộc phần gợi ý trả lời phải được viết ở một dòng mới (dòng riêng biệt) ngay phía dưới câu hỏi và bắt đầu bằng "Gợi ý: ...". Bôi đỏ từ khóa quan trọng hoặc đáp án gợi ý bằng thẻ <span style="color:red">từ khóa</span>.
+           - Vận dụng/Vận dụng cao: Ít nhất 2 bài tập tính toán định lượng hoặc tình huống thực tế giải quyết vấn đề. Bắt buộc phần hướng dẫn giải phải được viết ở một dòng mới (dòng riêng biệt) ngay phía dưới đề bài và bắt đầu bằng "Hướng dẫn giải: ...". Bôi đỏ đáp số cuối cùng bằng thẻ <span style="color:red">đáp số</span>.
         2. Checklist tự đánh giá kiến thức: Bảng tự đánh giá với danh sách các kiến thức cốt lõi (Bắt buộc dùng định dạng bảng Markdown có các cột: 'Nội dung kiến thức', 'Đã vững', 'Cần ôn lại', 'Ghi chú').
         3. Tóm tắt chương (1-2 đoạn văn ngắn gọn khái quát tinh thần của cả chương).
         
@@ -167,6 +167,7 @@ app.post('/api/generate-section', async (req, res) => {
           <span style="color:red">B. Chất oxi hóa</span>
           C. Môi trường
           D. Tác nhân phản ứng
+        - Định dạng tự luận/vận dụng: Phần "Gợi ý:" và "Hướng dẫn giải:" phải được xuống dòng mới riêng biệt ngay bên dưới câu hỏi/đề bài, không được viết liền dòng với câu hỏi.
         
         ${sharedInstructions}`;
         break;

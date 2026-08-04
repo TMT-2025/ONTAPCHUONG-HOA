@@ -143,9 +143,22 @@ function parseInlineText(text, size = 26, color = "000000", bold = false, italic
 
 // Function to check if a paragraph represents a standalone chemical equation
 function isChemicalEquation(text) {
+  // If it starts with a label like "Hướng dẫn", "Gợi ý", "Lưu ý", or "Mẹo", it's a paragraph containing an equation, not a standalone equation to center
+  const lower = text.toLowerCase().trim();
+  if (lower.startsWith('hướng dẫn') || lower.startsWith('gợi ý') || lower.startsWith('lưu ý') || lower.startsWith('mẹo')) {
+    return false;
+  }
   const hasArrow = /[\u2192\u21CC\u2191\u2193]|-->|<=>|->/.test(text);
   const hasSymbols = /[A-Z]/.test(text);
   return hasArrow && hasSymbols;
+}
+
+// Helper to detect if a text represents a multiple choice option like A., B., C., D.
+function isOption(text, letter) {
+  if (!text) return false;
+  // Strip any wrapping markdown formatting like **, * or HTML tags
+  const clean = text.replace(/^\*\*|^\*|^<span[^>]*>/i, '').trim();
+  return clean.toUpperCase().startsWith(letter + '.');
 }
 
 // Generates a callout box as a single-cell table
@@ -183,8 +196,122 @@ function convertMarkdownToDocx(markdownText) {
   const tokens = lexer(sanitizedText);
   const docChildren = [];
   let isFirstHeading1 = true;
+
+  // Local helper to render a single paragraph (handles callouts, chemical equations, standard text)
+  function renderParagraph(pText) {
+    // Handle Blockquote / Callout Boxes manually if marked as Notes/Tips in text
+    if (pText.startsWith('**Lưu ý:**') || pText.startsWith('**Mẹo ghi nhớ:**') || pText.startsWith('Lưu ý:') || pText.startsWith('Mẹo ghi nhớ:')) {
+      const isTip = pText.includes('Mẹo ghi nhớ');
+      const cleanText = pText.replace(/^\*\*?(Lưu ý|Mẹo ghi nhớ):\*\*?\s*/i, '');
+      const p = new Paragraph({
+        children: [
+          new TextRun({ text: isTip ? "💡 Mẹo ghi nhớ: " : "⚠️ Lưu ý: ", bold: true, font: "Times New Roman", size: 26, color: isTip ? '1565C0' : 'F57F17' }),
+          ...parseInlineText(cleanText, 26, "000000", false)
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { line: 360, before: 60, after: 60 }
+      });
+      docChildren.push(createCalloutBox([p], isTip ? 'tip' : 'note'));
+      return;
+    }
+    
+    // Handle stand-alone Chemical Equation rendering in center
+    if (isChemicalEquation(pText)) {
+      docChildren.push(new Paragraph({
+        children: parseInlineText(pText, 26, "000000", false),
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 180, after: 180 }
+      }));
+      return;
+    }
+    
+    // Standard paragraph
+    docChildren.push(new Paragraph({
+      children: parseInlineText(pText, 26, "000000", false),
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { line: 360, before: 120, after: 120 }
+    }));
+  }
   
-  for (const token of tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+
+    // Grouping Multiple-Choice Options (A., B., C., D.) based on length
+    if (token.type === 'paragraph' && isOption(token.text, 'A')) {
+      const next1 = tokens[i+1];
+      const next2 = tokens[i+2];
+      const next3 = tokens[i+3];
+      
+      if (next1 && next1.type === 'paragraph' && isOption(next1.text, 'B') &&
+          next2 && next2.type === 'paragraph' && isOption(next2.text, 'C') &&
+          next3 && next3.type === 'paragraph' && isOption(next3.text, 'D')) {
+        
+        const textA = token.text;
+        const textB = next1.text;
+        const textC = next2.text;
+        const textD = next3.text;
+        
+        // Strip tag markers to calculate exact text lengths
+        const cleanA = textA.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+        const cleanB = textB.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+        const cleanC = textC.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+        const cleanD = textD.replace(/<[^>]+>/g, '').replace(/\*/g, '');
+        
+        const maxLength = Math.max(cleanA.length, cleanB.length, cleanC.length, cleanD.length);
+        
+        const runsA = parseInlineText(textA, 26, "000000", false);
+        const runsB = parseInlineText(textB, 26, "000000", false);
+        const runsC = parseInlineText(textC, 26, "000000", false);
+        const runsD = parseInlineText(textD, 26, "000000", false);
+        
+        if (maxLength <= 15) {
+          // Case 1: 1 line (All 4 options on a single line)
+          docChildren.push(new Paragraph({
+            children: [
+              ...runsA,
+              new TextRun({ text: "      " }),
+              ...runsB,
+              new TextRun({ text: "      " }),
+              ...runsC,
+              new TextRun({ text: "      " }),
+              ...runsD
+            ],
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { line: 360, before: 60, after: 60 }
+          }));
+        } else if (maxLength <= 35) {
+          // Case 2: 2 lines (2 options per line)
+          docChildren.push(new Paragraph({
+            children: [
+              ...runsA,
+              new TextRun({ text: "                    " }), // Spacer
+              ...runsB
+            ],
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { line: 360, before: 60, after: 40 }
+          }));
+          docChildren.push(new Paragraph({
+            children: [
+              ...runsC,
+              new TextRun({ text: "                    " }),
+              ...runsD
+            ],
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { line: 360, before: 40, after: 60 }
+          }));
+        } else {
+          // Case 3: 4 lines (1 option per line, default paragraphs)
+          docChildren.push(new Paragraph({ children: runsA, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 60, after: 40 } }));
+          docChildren.push(new Paragraph({ children: runsB, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 40 } }));
+          docChildren.push(new Paragraph({ children: runsC, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 40 } }));
+          docChildren.push(new Paragraph({ children: runsD, alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, before: 40, after: 60 } }));
+        }
+        
+        i += 3; // Skip next B, C, D tokens
+        continue;
+      }
+    }
+
     switch (token.type) {
       case 'heading': {
         const text = token.text;
@@ -248,38 +375,25 @@ function convertMarkdownToDocx(markdownText) {
       case 'paragraph': {
         const text = token.text;
         
-        // Handle Blockquote / Callout Boxes manually if marked as Notes/Tips in text
-        if (text.startsWith('**Lưu ý:**') || text.startsWith('**Mẹo ghi nhớ:**') || text.startsWith('Lưu ý:') || text.startsWith('Mẹo ghi nhớ:')) {
-          const isTip = text.includes('Mẹo ghi nhớ');
-          const cleanText = text.replace(/^\*\*?(Lưu ý|Mẹo ghi nhớ):\*\*?\s*/i, '');
-          const p = new Paragraph({
-            children: [
-              new TextRun({ text: isTip ? "💡 Mẹo ghi nhớ: " : "⚠️ Lưu ý: ", bold: true, font: "Times New Roman", size: 26, color: isTip ? '1565C0' : 'F57F17' }),
-              ...parseInlineText(cleanText, 26, "000000", false)
-            ],
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { line: 360, before: 60, after: 60 }
-          });
-          docChildren.push(createCalloutBox([p], isTip ? 'tip' : 'note'));
-          break;
-        }
+        // Check if paragraph contains "Gợi ý:" or "Hướng dẫn:" and split them if not already at the start
+        let splitMarker = '';
+        if (text.includes('**Gợi ý:**')) splitMarker = '**Gợi ý:**';
+        else if (text.includes('Gợi ý:')) splitMarker = 'Gợi ý:';
+        else if (text.includes('**Hướng dẫn:**')) splitMarker = '**Hướng dẫn:**';
+        else if (text.includes('Hướng dẫn:')) splitMarker = 'Hướng dẫn:';
+        else if (text.includes('**Hướng dẫn giải:**')) splitMarker = '**Hướng dẫn giải:**';
+        else if (text.includes('Hướng dẫn giải:')) splitMarker = 'Hướng dẫn giải:';
         
-        // Handle stand-alone Chemical Equation rendering in center
-        if (isChemicalEquation(text)) {
-          docChildren.push(new Paragraph({
-            children: parseInlineText(text, 26, "000000", false),
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 180, after: 180 }
-          }));
-          break;
+        if (splitMarker && !text.trim().startsWith(splitMarker)) {
+          const splitIndex = text.indexOf(splitMarker);
+          const part1 = text.substring(0, splitIndex).trim();
+          const part2 = text.substring(splitIndex).trim();
+          
+          if (part1) renderParagraph(part1);
+          if (part2) renderParagraph(part2);
+        } else {
+          renderParagraph(text);
         }
-        
-        // Standard paragraph
-        docChildren.push(new Paragraph({
-          children: parseInlineText(text, 26, "000000", false),
-          alignment: AlignmentType.JUSTIFIED,
-          spacing: { line: 360, before: 120, after: 120 }
-        }));
         break;
       }
       

@@ -232,14 +232,22 @@ function convertMarkdownToDocx(markdownText) {
   function renderParagraph(pText) {
     if (!pText) return;
     
+    // Automatically correct numbering if the AI made a mistake in the sub-headings of exercises:
+    let cleanText = pText;
+    if (pText.trim().startsWith("1. Phương pháp giải")) {
+      cleanText = pText.replace(/^1\./, "2.");
+    } else if (pText.trim().startsWith("1. Ví dụ") || pText.trim().startsWith("1. Các ví dụ") || pText.trim().startsWith("1. Ví dụ mẫu")) {
+      cleanText = pText.replace(/^1\./, "3.");
+    }
+    
     // Handle Blockquote / Callout Boxes manually if marked as Notes/Tips in text
-    if (pText.startsWith('**Lưu ý:**') || pText.startsWith('**Mẹo ghi nhớ:**') || pText.startsWith('Lưu ý:') || pText.startsWith('Mẹo ghi nhớ:')) {
-      const isTip = pText.includes('Mẹo ghi nhớ');
-      const cleanText = pText.replace(/^\*\*?(Lưu ý|Mẹo ghi nhớ):\*\*?\s*/i, '');
+    if (cleanText.startsWith('**Lưu ý:**') || cleanText.startsWith('**Mẹo ghi nhớ:**') || cleanText.startsWith('Lưu ý:') || cleanText.startsWith('Mẹo ghi nhớ:')) {
+      const isTip = cleanText.includes('Mẹo ghi nhớ');
+      const cleanBodyText = cleanText.replace(/^\*\*?(Lưu ý|Mẹo ghi nhớ):\*\*?\s*/i, '');
       const p = new Paragraph({
         children: [
           new TextRun({ text: isTip ? "💡 Mẹo ghi nhớ: " : "⚠️ Lưu ý: ", bold: true, font: "Times New Roman", size: 26, color: isTip ? '1565C0' : 'F57F17' }),
-          ...parseInlineText(cleanText, 26, "000000", false)
+          ...parseInlineText(cleanBodyText, 26, "000000", false)
         ],
         alignment: AlignmentType.JUSTIFIED,
         spacing: { line: 360, before: 60, after: 60 }
@@ -249,9 +257,9 @@ function convertMarkdownToDocx(markdownText) {
     }
     
     // Handle stand-alone Chemical Equation rendering in center
-    if (isChemicalEquation(pText)) {
+    if (isChemicalEquation(cleanText)) {
       docChildren.push(new Paragraph({
-        children: parseInlineText(pText, 26, "000000", false),
+        children: parseInlineText(cleanText, 26, "000000", false),
         alignment: AlignmentType.CENTER,
         spacing: { before: 180, after: 180 }
       }));
@@ -260,7 +268,7 @@ function convertMarkdownToDocx(markdownText) {
     
     // Standard paragraph
     docChildren.push(new Paragraph({
-      children: parseInlineText(pText, 26, "000000", false),
+      children: parseInlineText(cleanText, 26, "000000", false),
       alignment: AlignmentType.JUSTIFIED,
       spacing: { line: 360, before: 120, after: 120 }
     }));

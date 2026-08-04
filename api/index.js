@@ -125,11 +125,13 @@ app.post('/api/generate-section', async (req, res) => {
         - Lớp: Hóa học ${grade}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Nội dung cần bao gồm các dạng bài tập điển hình nhất của chương. Với mỗi dạng bài tập, hãy cung cấp đầy đủ:
-        - Tên dạng bài tập
-        - Dấu hiệu nhận biết dạng bài
-        - Phương pháp giải chi tiết (các bước cụ thể)
-        - Ít nhất 2 ví dụ mẫu minh họa có lời giải chi tiết (kèm phương trình phản ứng hóa học chính xác).
+        Nội dung cần bao gồm các dạng bài tập điển hình nhất của chương. 
+        CẤU TRÚC TRÌNH BÀY BẮT BUỘC CHO MỖI DẠNG BÀI TẬP:
+        Với mỗi dạng bài tập, hãy trình bày các phần nhỏ theo thứ tự tăng dần chính xác như sau:
+        1. Dấu hiệu nhận biết dạng bài (Bắt đầu bằng tiêu đề dòng: "1. Dấu hiệu nhận biết dạng bài")
+        2. Phương pháp giải chi tiết (Bắt đầu bằng tiêu đề dòng: "2. Phương pháp giải chi tiết")
+        3. Ví dụ mẫu minh họa (Bắt đầu bằng tiêu đề dòng: "3. Ví dụ mẫu minh họa" hoặc "3. Các ví dụ minh họa")
+        Tuyệt đối KHÔNG ĐƯỢC đánh số thứ tự sai lệch (ví dụ dùng chung số thứ tự "1." cho các mục này).
         
         ${sharedInstructions}`;
         break;

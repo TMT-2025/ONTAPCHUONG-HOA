@@ -62,6 +62,10 @@ app.post('/api/generate-section', async (req, res) => {
     const model = genAI.getGenerativeModel({ model: modelName });
 
     let prompt = "";
+    const programTypeName = programType === 'topics' 
+      ? 'Chuyên đề học tập (Học sinh học theo sách Chuyên đề học tập Hóa học THPT)' 
+      : 'Chương trình cốt lõi (Học sinh học theo sách giáo khoa Hóa học cốt lõi THPT)';
+    const lessonListStr = chapter.lessons.join(', ');
 
     switch (sectionType) {
       case 'intro': {
@@ -69,6 +73,8 @@ app.post('/api/generate-section', async (req, res) => {
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Giới thiệu chương** và **Mục tiêu, Kiến thức cần đạt** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
+        - Loại chương trình: ${programTypeName}
+        - Các bài học trong chương/chuyên đề này: ${lessonListStr}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
         Nội dung cần viết ngắn gọn, khoa học, súc tích giúp học sinh tự học định hướng nhanh mục tiêu.
@@ -99,6 +105,7 @@ app.post('/api/generate-section', async (req, res) => {
         - Bài học: ${lessonName}
         - Thuộc chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
+        - Loại chương trình: ${programTypeName}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
         Nội dung của bài học phải cực kỳ đầy đủ, chi tiết để học sinh tự học.
@@ -126,6 +133,8 @@ app.post('/api/generate-section', async (req, res) => {
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Tổng hợp công thức, Quy tắc và Bảng tổng hợp kiến thức** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
+        - Loại chương trình: ${programTypeName}
+        - Các bài học trong chương/chuyên đề này: ${lessonListStr}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
         Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
@@ -150,9 +159,12 @@ app.post('/api/generate-section', async (req, res) => {
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy viết tài liệu ôn tập phần **Các dạng bài tập ôn tập tiêu biểu** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
+        - Loại chương trình: ${programTypeName}
+        - Các bài học trong chương/chuyên đề này: ${lessonListStr}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        Yêu cầu đặc biệt về nội dung và tiêu đề (BẮT BUỘC):
+        - BẮT BUỘC tất cả các dạng bài tập, ví dụ, phương pháp giải phải được biên soạn chính xác theo nội dung và kiến thức của ${programTypeName} (gồm các bài học: ${lessonListStr}), tuyệt đối không được nhầm lẫn lấy nội dung bài tập của Chương trình cốt lõi khác.
         - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
           # V - TÀI LIỆU ÔN TẬP CHƯƠNG ${chapter.id}: ${uppercaseTitle} - HÓA HỌC ${grade} (KẾT NỐI TRI THỨC)
         - Tiếp theo là tiêu đề phụ Heading 1:
@@ -179,9 +191,12 @@ app.post('/api/generate-section', async (req, res) => {
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Các lỗi sai thường gặp, Mẹo ghi nhớ nhanh và Liên hệ thực tiễn** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
+        - Loại chương trình: ${programTypeName}
+        - Các bài học trong chương/chuyên đề này: ${lessonListStr}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        Yêu cầu đặc biệt về nội dung và tiêu đề (BẮT BUỘC):
+        - BẮT BUỘC tất cả lỗi sai thường gặp, mẹo ghi nhớ và liên hệ thực tiễn phải được lấy chính xác từ kiến thức của ${programTypeName} (gồm các bài học: ${lessonListStr}), tuyệt đối không được nhầm lẫn lấy kiến thức từ Chương trình cốt lõi khác.
         - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
           # VI - CÁC LỖI SAI THƯỜNG GẶP, MẸO GHI NHỚ NHANH VÀ LIÊN HỆ THỰC TIỄN - CHƯƠNG ${chapter.id}: ${uppercaseTitle} (HÓA HỌC ${grade} - KẾT NỐI TRI THỨC)
         - Tiếp theo, trình bày các nội dung con định dạng Heading 2:
@@ -201,20 +216,23 @@ app.post('/api/generate-section', async (req, res) => {
         prompt = `Bạn là giáo viên Hóa học THPT biên soạn tài liệu ôn tập chương. Hãy biên soạn phần **Câu hỏi tự kiểm tra tự luận/trắc nghiệm, Checklist tự đánh giá và Tóm tắt chương** cho chương sau:
         - Tên chương: ${chapter.title} (Chương ${chapter.id})
         - Lớp: Hóa học ${grade}
+        - Loại chương trình: ${programTypeName}
+        - Các bài học trong chương/chuyên đề này: ${lessonListStr}
         - Bộ sách: Kết nối tri thức với cuộc sống
         
-        Yêu cầu đặc biệt về cấu trúc tiêu đề (BẮT BUỘC):
+        Yêu cầu đặc biệt về nội dung và tiêu đề (BẮT BUỘC):
+        - BẮT BUỘC tất cả hệ thống câu hỏi, bài tập trắc nghiệm/tự luận, checklist và tóm tắt chương phải được xây dựng chính xác dựa trên kiến thức của ${programTypeName} (gồm các bài học: ${lessonListStr}), tuyệt đối không được nhầm lẫn lấy kiến thức từ Chương trình cốt lõi khác.
         - Bắt đầu bằng tiêu đề lớn định dạng Heading 1:
           # VII - HỆ THỐNG CÂU HỎI VÀ TÀI LIỆU ÔN TẬP CHƯƠNG ${chapter.id}: ${uppercaseTitle} - HÓA HỌC ${grade} (KẾT NỐI TRI THỨC)
         - Tiếp theo là tiêu đề phụ định dạng Heading 2:
           ## PHẦN 1: HỆ THỐNG CÂU HỎI TỰ KIỂM TRA ĐÁNH GIÁ NĂNG LỰC
         - Trình bày câu hỏi theo các mức độ định dạng Heading 3:
           ### I. Mức độ Nhận biết
-          (Ít nhất 5 câu hỏi trắc nghiệm A, B, C, D. Tô đỏ phương án đúng bằng <span style="color:red">A. Đáp án</span>. Mỗi phương án bắt đầu ở dòng mới sát lề trái, tuyệt đối không dùng gạch đầu dòng hay dấu sao.)
+          (Ít nhất 5 câu hỏi trắc nghiệm A, B, C, D về nội dung chương này. Tô đỏ phương án đúng bằng <span style="color:red">A. Đáp án</span>. Mỗi phương án bắt đầu ở dòng mới sát lề trái, tuyệt đối không dùng gạch đầu dòng hay dấu sao.)
           ### II. Mức độ Thông hiểu
-          (Ít nhất 3 câu tự luận kèm Gợi ý trả lời chi tiết. Gợi ý trả lời viết xuống dòng bắt đầu bằng "Gợi ý: ...", bọc từ khóa đỏ bằng <span style="color:red">...</span>)
+          (Ít nhất 3 câu tự luận kèm Gợi ý trả lời chi tiết về nội dung chương này. Gợi ý trả lời viết xuống dòng bắt đầu bằng "Gợi ý: ...", bọc từ khóa đỏ bằng <span style="color:red">...</span>)
           ### III. Mức độ Vận dụng và Vận dụng cao
-          (Ít nhất 2 bài tập tính toán có hướng dẫn giải. Hướng dẫn giải viết xuống dòng bắt đầu bằng "Hướng dẫn giải: ...", bọc đáp số đỏ bằng <span style="color:red">...</span>)
+          (Ít nhất 2 bài tập tính toán có hướng dẫn giải về nội dung chương này. Hướng dẫn giải viết xuống dòng bắt đầu bằng "Hướng dẫn giải: ...", bọc đáp số đỏ bằng <span style="color:red">...</span>)
         - Tiếp theo là phần tự đánh giá định dạng Heading 2:
           ## PHẦN 2: CHECKLIST TỰ ĐÁNH GIÁ KIẾN THỨC
           (Bảng tự đánh giá với các cột: Nội dung kiến thức, Đã vững, Cần ôn lại, Ghi chú)

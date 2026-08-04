@@ -308,21 +308,58 @@ function convertMarkdownToDocx(markdownText) {
       case 'list': {
         const items = token.items || [];
         items.forEach((item, index) => {
-          const itemText = item.text || '';
-          const runs = [];
+          const rawText = item.text || '';
           
-          if (token.ordered) {
-            runs.push(new TextRun({ text: `${index + 1}. `, bold: true, font: "Times New Roman", size: 26 }));
-          } else {
-            runs.push(new TextRun({ text: "•  ", bold: true, font: "Times New Roman", size: 26 }));
-          }
-          runs.push(...parseInlineText(itemText, 26, "000000", false));
+          // Split by newline first, then normalize inline asterisks or bullets to newlines with markers
+          let normalized = rawText.replace(/\s+\*\s+/g, '\n* ');
+          normalized = normalized.replace(/\s+•\s+/g, '\n• ');
           
-          docChildren.push(new Paragraph({
-            children: runs,
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { line: 360, before: 60, after: 60 }
-          }));
+          const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+          
+          lines.forEach((line, lineIndex) => {
+            const runs = [];
+            let isSubItem = false;
+            let bulletPrefix = "•  ";
+            
+            // Check if this line is a sub-item
+            if (lineIndex > 0 || line.startsWith('*') || line.startsWith('-') || line.startsWith('•')) {
+              isSubItem = true;
+            }
+            
+            let cleanLine = line;
+            if (line.startsWith('*') || line.startsWith('-') || line.startsWith('•')) {
+              const firstChar = line.charAt(0);
+              bulletPrefix = `${firstChar}  `;
+              cleanLine = line.substring(1).trim();
+            } else if (isSubItem) {
+              bulletPrefix = "*  ";
+            }
+            
+            if (lineIndex === 0 && !isSubItem) {
+              if (token.ordered) {
+                runs.push(new TextRun({ text: `${index + 1}. `, bold: true, font: "Times New Roman", size: 26 }));
+              } else {
+                runs.push(new TextRun({ text: "•  ", bold: true, font: "Times New Roman", size: 26 }));
+              }
+              runs.push(...parseInlineText(cleanLine, 26, "000000", false));
+              
+              docChildren.push(new Paragraph({
+                children: runs,
+                alignment: AlignmentType.JUSTIFIED,
+                spacing: { line: 360, before: 60, after: 60 }
+              }));
+            } else {
+              runs.push(new TextRun({ text: bulletPrefix, bold: true, font: "Times New Roman", size: 26 }));
+              runs.push(...parseInlineText(cleanLine, 26, "000000", false));
+              
+              docChildren.push(new Paragraph({
+                children: runs,
+                alignment: AlignmentType.JUSTIFIED,
+                indent: { left: 360 }, // Indent sub-bullets by 360 twips
+                spacing: { line: 360, before: 40, after: 40 }
+              }));
+            }
+          });
         });
         break;
       }

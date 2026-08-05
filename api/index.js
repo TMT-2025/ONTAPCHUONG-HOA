@@ -303,10 +303,10 @@ app.post('/api/export-docx', async (req, res) => {
 
 // Single Source of Truth for packages configuration
 const PACKAGES = {
-  goi1: { id: 'goi1', name: 'Gói 1 (Free)', price: 0, credits: 1 },
-  goi2: { id: 'goi2', name: 'Gói 2 (Tiết kiệm)', price: 50000, credits: 10 },
-  goi3: { id: 'goi3', name: 'Gói 3 (Pro)', price: 100000, credits: 25 }
+  goi2: { id: 'goi2', name: 'Gói 1 (Tiết kiệm)', price: 50000, credits: 10 },
+  goi3: { id: 'goi3', name: 'Gói 2 (Pro)', price: 100000, credits: 25 }
 };
+
 
 const PAYMENT_CONFIG = {
   salt: 'TMT_2026_KHBD_SALT',
@@ -425,7 +425,7 @@ app.post('/api/create-payment', async (req, res) => {
       return res.status(500).json({ error: 'Không thể khởi tạo đơn hàng' });
     }
 
-    const orderCode = orders[0].id;
+    const orderCode = orders[0].id + 300000;
     const description = `TMT ${deviceId.replace(/-/g, '')}`.substring(0, 25);
 
     const dataToSign = {
@@ -456,7 +456,7 @@ app.post('/api/create-payment', async (req, res) => {
 
     if (result.code !== '00') {
       console.error('[create-payment] payOS từ chối:', result);
-      await supabaseFetch(`chemistry_orders?id=eq.${orderCode}`, {
+      await supabaseFetch(`chemistry_orders?id=eq.${orders[0].id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'cancelled' })
       });
@@ -486,7 +486,10 @@ app.get('/api/check-order-status', async (req, res) => {
       return res.status(400).json({ error: 'Thiếu orderCode hoặc deviceId' });
     }
 
-    const orders = await supabaseFetch(`chemistry_orders?id=eq.${orderCode}&device_id=eq.${deviceId}`);
+    const numericOrderCode = Number(orderCode);
+    const actualOrderId = numericOrderCode >= 300000 ? numericOrderCode - 300000 : numericOrderCode;
+
+    const orders = await supabaseFetch(`chemistry_orders?id=eq.${actualOrderId}&device_id=eq.${deviceId}`);
     if (!orders || orders.length === 0) {
       return res.status(200).json({ status: 'not_found' });
     }
@@ -542,9 +545,10 @@ app.post('/api/payos-webhook', async (req, res) => {
     }
 
     const orderCode = Number(data.orderCode);
-    const orders = await supabaseFetch(`chemistry_orders?id=eq.${orderCode}`);
+    const actualOrderId = orderCode >= 300000 ? orderCode - 300000 : orderCode;
+    const orders = await supabaseFetch(`chemistry_orders?id=eq.${actualOrderId}`);
     if (!orders || orders.length === 0) {
-      console.error(`[webhook] Không tìm thấy orderCode ${orderCode} trong chemistry_orders`);
+      console.error(`[webhook] Không tìm thấy orderCode ${orderCode} (db id: ${actualOrderId}) trong chemistry_orders`);
       return res.status(200).json({ received: true });
     }
 
@@ -559,7 +563,7 @@ app.post('/api/payos-webhook', async (req, res) => {
       return res.status(200).json({ received: true });
     }
 
-    await supabaseFetch(`chemistry_orders?id=eq.${orderCode}&status=eq.pending`, {
+    await supabaseFetch(`chemistry_orders?id=eq.${actualOrderId}&status=eq.pending`, {
       method: 'PATCH',
       body: JSON.stringify({
         status: 'paid'

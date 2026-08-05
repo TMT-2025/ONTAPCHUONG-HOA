@@ -45,15 +45,14 @@ function App() {
 
   // Billing & Device ID State
   const [deviceId, setDeviceId] = useState('');
-  const [credits, setCredits] = useState(2);
+  const [credits, setCredits] = useState(1);
   const [tier, setTier] = useState('free');
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallTab, setPaywallTab] = useState('pay'); // 'pay' | 'activate'
   
   const PAYMENT_PACKAGES = [
-    { id: 'goi1', name: 'Gói 1 (Free)', price: 0, credits: 1, label: 'Gói 1 (Free): 0 đ - Nhận 1 lượt tải dùng thử' },
-    { id: 'goi2', name: 'Gói 2 (Tiết kiệm)', price: 50000, credits: 10, label: 'Gói 2 (Tiết kiệm): 50.000 đ - Thêm 10 lượt tải' },
-    { id: 'goi3', name: 'Gói 3 (Pro)', price: 100000, credits: 25, label: 'Gói 3 (Pro): 100.000 đ - Thêm 25 lượt tải' }
+    { id: 'goi2', name: 'Gói 1 (Tiết kiệm)', price: 50000, credits: 10, label: 'Gói 1 (Tiết kiệm): 50.000 đ - Thêm 10 lượt tải' },
+    { id: 'goi3', name: 'Gói 2 (Pro)', price: 100000, credits: 25, label: 'Gói 2 (Pro): 100.000 đ - Thêm 25 lượt tải' }
   ];
 
   const PAYMENT_CONFIG = {
@@ -66,7 +65,7 @@ function App() {
   };
 
   // Selected package for payment QR code
-  const [selectedPackage, setSelectedPackage] = useState(PAYMENT_PACKAGES[1]);
+  const [selectedPackage, setSelectedPackage] = useState(PAYMENT_PACKAGES[0]);
   const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false);
   const [currentOrderCode, setCurrentOrderCode] = useState(null);
   const [currentCheckoutUrl, setCurrentCheckoutUrl] = useState(null);
@@ -106,9 +105,9 @@ function App() {
       setCredits(parseInt(storedCredits, 10));
       setTier(storedTier);
     } else {
-      setCredits(2);
+      setCredits(1);
       setTier('free');
-      localStorage.setItem('khbd_credits', '2');
+      localStorage.setItem('khbd_credits', '1');
       localStorage.setItem('khbd_tier', 'free');
     }
   }, []);

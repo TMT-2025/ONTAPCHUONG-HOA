@@ -91,9 +91,13 @@ function App() {
   // Initialize Device ID & Credits
   useEffect(() => {
     let storedDeviceId = localStorage.getItem('khbd_device_id');
+    if (storedDeviceId && storedDeviceId.startsWith('KHBD-')) {
+      storedDeviceId = storedDeviceId.replace('KHBD-', 'ON-');
+      localStorage.setItem('khbd_device_id', storedDeviceId);
+    }
     if (!storedDeviceId) {
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-      storedDeviceId = `KHBD-CHEM-${rand}`;
+      storedDeviceId = `ON-CHEM-${rand}`;
       localStorage.setItem('khbd_device_id', storedDeviceId);
     }
     setDeviceId(storedDeviceId);
@@ -240,7 +244,7 @@ function App() {
       hash |= 0;
     }
     const absHash = Math.abs(hash).toString(36).toUpperCase();
-    return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'KHBD'}`;
+    return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'ON'}`;
   };
 
   const handleActivateVIPKey = async () => {
@@ -1193,7 +1197,7 @@ function App() {
                           type="text"
                           value={adminTargetDevice}
                           onChange={(e) => setAdminTargetDevice(e.target.value)}
-                          placeholder="KHBD-CHEM-XXXXXX"
+                          placeholder="ON-CHEM-XXXXXX"
                           className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 focus:border-purple-500 outline-none"
                         />
                       </div>

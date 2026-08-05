@@ -323,7 +323,7 @@ const getActivationCode = (devId) => {
     hash |= 0;
   }
   const absHash = Math.abs(hash).toString(36).toUpperCase();
-  return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'KHBD'}`;
+  return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'ON'}`;
 };
 
 const verifySignature = (data, signature, checksumKey) => {

@@ -5,6 +5,7 @@ const curriculum = require('./helpers/curriculum');
 const { generateDocx } = require('./helpers/docxHelper');
 const docx = require('docx');
 const Packer = docx.Packer;
+const crypto = require('crypto');
 
 // Load dotenv for local development
 require('dotenv').config();
@@ -297,6 +298,362 @@ app.post('/api/export-docx', async (req, res) => {
   } catch (error) {
     console.error("DOCX Export Error:", error);
     res.status(500).json({ error: `Xuất file Word thất bại: ${error.message}` });
+  }
+});
+
+// Single Source of Truth for packages configuration
+const PACKAGES = {
+  goi1: { id: 'goi1', name: 'Gói 1 (Free)', price: 0, credits: 1 },
+  goi2: { id: 'goi2', name: 'Gói 2 (Tiết kiệm)', price: 50000, credits: 10 },
+  goi3: { id: 'goi3', name: 'Gói 3 (Pro)', price: 100000, credits: 25 }
+};
+
+const PAYMENT_CONFIG = {
+  salt: 'TMT_2026_KHBD_SALT',
+  adminBypassKey: 'TMT_KEYGEN_2026'
+};
+
+const getActivationCode = (devId) => {
+  const salt = PAYMENT_CONFIG.salt;
+  let hash = 0;
+  const combined = devId.trim() + salt;
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  const absHash = Math.abs(hash).toString(36).toUpperCase();
+  return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'KHBD'}`;
+};
+
+const supabaseFetch = async (path, options = {}) => {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase credentials are not configured in environment variables');
+  }
+
+  const url = `${supabaseUrl}/rest/v1/${path}`;
+  const headers = {
+    'apikey': supabaseKey,
+    'Authorization': `Bearer ${supabaseKey}`,
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+
+  const res = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Supabase API call to ${path} failed: ${res.status} ${res.statusText} - ${errorText}`);
+  }
+
+  if (res.status === 204) {
+    return null;
+  }
+
+  return await res.json();
+};
+
+// 4. POST /api/create-payment - Creates a payment request
+app.post('/api/create-payment', async (req, res) => {
+  try {
+    const { deviceId, packageId, cancelUrl, returnUrl } = req.body;
+    if (!deviceId || typeof deviceId !== 'string') {
+      return res.status(400).json({ error: 'Thiếu deviceId' });
+    }
+    const pkg = PACKAGES[packageId];
+    if (!pkg) {
+      return res.status(400).json({ error: 'packageId không hợp lệ' });
+    }
+
+    // 1. Gói Free (0 VND)
+    if (pkg.price === 0) {
+      const orders = await supabaseFetch('chemistry_orders', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          device_id: deviceId,
+          package_id: pkg.id,
+          amount: pkg.price,
+          status: 'paid',
+          created_at: new Date().toISOString()
+        })
+      });
+
+      if (!orders || orders.length === 0) {
+        return res.status(500).json({ error: 'Không thể tạo đơn hàng Free' });
+      }
+
+      return res.status(200).json({
+        code: '00',
+        data: {
+          orderCode: orders[0].id,
+          checkoutUrl: null,
+          qrCode: null,
+          isFree: true
+        }
+      });
+    }
+
+    // 2. Gói có phí -> Cổng payOS
+    const clientId = process.env.PAYOS_CLIENT_ID;
+    const apiKey = process.env.PAYOS_API_KEY;
+    const checksumKey = process.env.PAYOS_CHECKSUM_KEY;
+
+    if (!clientId || !apiKey || !checksumKey) {
+      console.error('[create-payment] Thiếu payOS keys trong env');
+      return res.status(500).json({ error: 'payOS configuration keys are missing' });
+    }
+
+    const orders = await supabaseFetch('chemistry_orders', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        device_id: deviceId,
+        package_id: pkg.id,
+        amount: pkg.price,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+    });
+
+    if (!orders || orders.length === 0) {
+      return res.status(500).json({ error: 'Không thể khởi tạo đơn hàng' });
+    }
+
+    const orderCode = orders[0].id;
+    const description = `TMT ${deviceId.replace(/-/g, '')}`.substring(0, 25);
+
+    const dataToSign = {
+      amount: pkg.price,
+      cancelUrl,
+      description,
+      orderCode,
+      returnUrl,
+    };
+
+    const sortedKeys = Object.keys(dataToSign).sort();
+    const signString = sortedKeys.map((key) => `${key}=${dataToSign[key]}`).join('&');
+    const signature = crypto.createHmac('sha256', checksumKey).update(signString).digest('hex');
+
+    const payload = { ...dataToSign, signature };
+
+    const payosRes = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-id': clientId,
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await payosRes.json();
+
+    if (result.code !== '00') {
+      console.error('[create-payment] payOS từ chối:', result);
+      await supabaseFetch(`chemistry_orders?id=eq.${orderCode}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json({
+      code: '00',
+      data: {
+        orderCode,
+        checkoutUrl: result.data.checkoutUrl,
+        qrCode: result.data.qrCode,
+      },
+    });
+
+  } catch (error) {
+    console.error('[create-payment] Lỗi:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. GET /api/check-order-status - Client polls to check payment and claims credits
+app.get('/api/check-order-status', async (req, res) => {
+  try {
+    const { orderCode, deviceId } = req.query;
+    if (!orderCode || !deviceId) {
+      return res.status(400).json({ error: 'Thiếu orderCode hoặc deviceId' });
+    }
+
+    const orders = await supabaseFetch(`chemistry_orders?id=eq.${orderCode}&device_id=eq.${deviceId}`);
+    if (!orders || orders.length === 0) {
+      return res.status(200).json({ status: 'not_found' });
+    }
+
+    const order = orders[0];
+    if (order.status !== 'paid') {
+      return res.status(200).json({ status: order.status });
+    }
+
+    if (order.claimed_at) {
+      return res.status(200).json({ status: 'paid', already_claimed: true });
+    }
+
+    const claimedOrders = await supabaseFetch(`chemistry_orders?id=eq.${order.id}&claimed_at=is.null`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        claimed_at: new Date().toISOString()
+      })
+    });
+
+    const wonClaim = claimedOrders && claimedOrders.length > 0;
+    const pkg = PACKAGES[order.package_id];
+
+    return res.status(200).json({
+      status: 'paid',
+      already_claimed: !wonClaim,
+      packageId: order.package_id,
+      credits: wonClaim && pkg ? pkg.credits : 0,
+      price: order.amount,
+    });
+
+  } catch (err) {
+    console.error('[check-order-status] Lỗi:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. POST /api/payos-webhook - Receive secure payment notification from payOS
+app.post('/api/payos-webhook', async (req, res) => {
+  try {
+    const { data, signature } = req.body || {};
+    const checksumKey = process.env.PAYOS_CHECKSUM_KEY;
+
+    if (!data || !signature || !checksumKey) {
+      return res.status(200).json({ received: true });
+    }
+
+    const isValid = verifySignature(data, signature, checksumKey);
+    if (!isValid) {
+      console.error('[webhook] Chữ ký không hợp lệ, bỏ qua payload này');
+      return res.status(200).json({ received: true });
+    }
+
+    const orderCode = Number(data.orderCode);
+    const orders = await supabaseFetch(`chemistry_orders?id=eq.${orderCode}`);
+    if (!orders || orders.length === 0) {
+      console.error(`[webhook] Không tìm thấy orderCode ${orderCode} trong chemistry_orders`);
+      return res.status(200).json({ received: true });
+    }
+
+    const order = orders[0];
+    if (order.status === 'paid') {
+      return res.status(200).json({ received: true });
+    }
+
+    const paidAmount = Number(data.amount);
+    if (paidAmount !== order.amount) {
+      console.error(`[webhook] Amount mismatch cho order ${orderCode}: kỳ vọng ${order.amount}, nhận ${paidAmount}`);
+      return res.status(200).json({ received: true });
+    }
+
+    await supabaseFetch(`chemistry_orders?id=eq.${orderCode}&status=eq.pending`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'paid'
+      })
+    });
+
+    return res.status(200).json({ received: true });
+
+  } catch (err) {
+    console.error('[webhook] Lỗi xử lý:', err);
+    return res.status(200).json({ received: true });
+  }
+});
+
+// 7. POST /api/activate-vip-key - Client activates a database-backed VIP activation key
+app.post('/api/activate-vip-key', async (req, res) => {
+  try {
+    const { key, deviceId } = req.body;
+    if (!key || !deviceId) {
+      return res.status(400).json({ error: 'Thiếu key hoặc deviceId' });
+    }
+
+    const cleanedKey = key.trim().toUpperCase();
+
+    const vipKeys = await supabaseFetch(`chemistry_vip_keys?key_code=eq.${cleanedKey}&device_id=eq.${deviceId}&status=eq.unused`);
+    if (!vipKeys || vipKeys.length === 0) {
+      return res.status(400).json({ error: 'Mã kích hoạt không hợp lệ, sai Thiết bị, hoặc đã được sử dụng.' });
+    }
+
+    const vipKeyRecord = vipKeys[0];
+
+    const claimedKeys = await supabaseFetch(`chemistry_vip_keys?id=eq.${vipKeyRecord.id}&status=eq.unused`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        status: 'used',
+        used_at: new Date().toISOString()
+      })
+    });
+
+    if (!claimedKeys || claimedKeys.length === 0) {
+      return res.status(400).json({ error: 'Mã kích hoạt đang được xử lý hoặc đã sử dụng.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      credits: vipKeyRecord.credits
+    });
+
+  } catch (err) {
+    console.error('[activate-vip-key] Lỗi:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. POST /api/admin/generate-vip-key - Generates a secure VIP activation key (Admin Only)
+app.post('/api/admin/generate-vip-key', async (req, res) => {
+  try {
+    const { deviceId, credits, bypassKey } = req.body;
+    if (!deviceId || !credits || !bypassKey) {
+      return res.status(400).json({ error: 'Thiếu thông tin yêu cầu.' });
+    }
+
+    if (bypassKey !== PAYMENT_CONFIG.adminBypassKey) {
+      return res.status(401).json({ error: 'Không có quyền truy cập.' });
+    }
+
+    const cleanKey = getActivationCode(deviceId);
+    const fullKeyCode = `VIP${credits}-${cleanKey}`;
+
+    const keys = await supabaseFetch('chemistry_vip_keys', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        key_code: fullKeyCode,
+        device_id: deviceId,
+        credits: parseInt(credits),
+        status: 'unused',
+        created_at: new Date().toISOString()
+      })
+    });
+
+    if (!keys || keys.length === 0) {
+      return res.status(500).json({ error: 'Không thể tạo bản ghi VIP Key.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      keyCode: fullKeyCode
+    });
+
+  } catch (err) {
+    console.error('[admin-generate-key] Lỗi:', err);
+    return res.status(500).json({ error: err.message });
   }
 });
 

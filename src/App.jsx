@@ -13,7 +13,15 @@ import {
   FileText,
   HelpCircle,
   RefreshCw,
-  Info
+  Info,
+  Sparkles,
+  Lock,
+  CreditCard,
+  ShieldCheck,
+  Copy,
+  Check,
+  QrCode,
+  ExternalLink
 } from 'lucide-react';
 
 function App() {
@@ -34,6 +42,305 @@ function App() {
   const [generatedDocBlob, setGeneratedDocBlob] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Billing & Device ID State
+  const [deviceId, setDeviceId] = useState('');
+  const [credits, setCredits] = useState(2);
+  const [tier, setTier] = useState('free');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallTab, setPaywallTab] = useState('pay'); // 'pay' | 'activate'
+  
+  const PAYMENT_PACKAGES = [
+    { id: 'goi1', name: 'Gói 1 (Free)', price: 0, credits: 1, label: 'Gói 1 (Free): 0 đ - Nhận 1 lượt tải dùng thử' },
+    { id: 'goi2', name: 'Gói 2 (Tiết kiệm)', price: 50000, credits: 10, label: 'Gói 2 (Tiết kiệm): 50.000 đ - Thêm 10 lượt tải' },
+    { id: 'goi3', name: 'Gói 3 (Pro)', price: 100000, credits: 25, label: 'Gói 3 (Pro): 100.000 đ - Thêm 25 lượt tải' }
+  ];
+
+  const PAYMENT_CONFIG = {
+    bankId: 'MB',
+    accountNo: '0989618939',
+    accountName: 'TRAN MINH THANH',
+    supportZalo: '0989618939',
+    adminBypassKey: 'TMT_KEYGEN_2026',
+    salt: 'TMT_2026_KHBD_SALT'
+  };
+
+  // Selected package for payment QR code
+  const [selectedPackage, setSelectedPackage] = useState(PAYMENT_PACKAGES[1]);
+  const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false);
+  const [currentOrderCode, setCurrentOrderCode] = useState(null);
+  const [currentCheckoutUrl, setCurrentCheckoutUrl] = useState(null);
+  const [currentQrCode, setCurrentQrCode] = useState(null);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [paymentSuccessMessage, setPaymentSuccessMessage] = useState(null);
+
+  // VIP Key Activation
+  const [activationKeyInput, setActivationKeyInput] = useState('');
+  const [activationError, setActivationError] = useState(null);
+  const [activationSuccess, setActivationSuccess] = useState(false);
+
+  // Admin keygen panel
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminTargetDevice, setAdminTargetDevice] = useState('');
+  const [adminSelectedCredits, setAdminSelectedCredits] = useState(10);
+  const [adminGeneratedKey, setAdminGeneratedKey] = useState('');
+  const [adminBypassKey, setAdminBypassKey] = useState('');
+
+  // Track if credits have been deducted for current generated doc
+  const [isCreditDeducted, setIsCreditDeducted] = useState(false);
+
+  // Initialize Device ID & Credits
+  useEffect(() => {
+    let storedDeviceId = localStorage.getItem('khbd_device_id');
+    if (!storedDeviceId) {
+      const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+      storedDeviceId = `KHBD-CHEM-${rand}`;
+      localStorage.setItem('khbd_device_id', storedDeviceId);
+    }
+    setDeviceId(storedDeviceId);
+
+    const storedCredits = localStorage.getItem('khbd_credits');
+    const storedTier = localStorage.getItem('khbd_tier');
+
+    if (storedCredits !== null && storedTier !== null) {
+      setCredits(parseInt(storedCredits, 10));
+      setTier(storedTier);
+    } else {
+      setCredits(2);
+      setTier('free');
+      localStorage.setItem('khbd_credits', '2');
+      localStorage.setItem('khbd_tier', 'free');
+    }
+  }, []);
+
+  // Create payOS payment link when paywall opens or package changes
+  useEffect(() => {
+    if (!showPaywall || !selectedPackage) return;
+    if (selectedPackage.price === 0) {
+      setCurrentOrderCode(null);
+      setCurrentCheckoutUrl(null);
+      setCurrentQrCode(null);
+      setIsCreatingPaymentLink(false);
+      return;
+    }
+
+    let isMounted = true;
+    const timerId = setTimeout(async () => {
+      setIsCreatingPaymentLink(true);
+      setCurrentOrderCode(null);
+      setCurrentCheckoutUrl(null);
+      setCurrentQrCode(null);
+      try {
+        const response = await fetch('/api/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceId,
+            packageId: selectedPackage.id,
+            cancelUrl: window.location.href,
+            returnUrl: window.location.href
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Không thể tạo link thanh toán');
+        }
+
+        const resData = await response.json();
+        if (resData.code === '00' && isMounted) {
+          setCurrentOrderCode(resData.data.orderCode);
+          setCurrentCheckoutUrl(resData.data.checkoutUrl);
+          setCurrentQrCode(resData.data.qrCode);
+        }
+      } catch (err) {
+        console.error('Generate payment link error:', err);
+      } finally {
+        if (isMounted) {
+          setIsCreatingPaymentLink(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timerId);
+    };
+  }, [showPaywall, selectedPackage, deviceId]);
+
+  // Polling for transaction updates
+  useEffect(() => {
+    if (!showPaywall || !currentOrderCode) return;
+
+    let intervalId;
+    let isPolling = false;
+
+    const checkPaymentStatus = async () => {
+      if (isPolling) return;
+      isPolling = true;
+      setIsCheckingPayment(true);
+      try {
+        const response = await fetch(`/api/check-order-status?orderCode=${currentOrderCode}&deviceId=${deviceId}`, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) return;
+
+        const result = await response.json();
+        if (result.status === 'paid' && !result.already_claimed && result.credits > 0) {
+          const addedCredits = result.credits;
+          const oldCredits = tier === 'free' ? 0 : credits;
+          const nextCredits = oldCredits + addedCredits;
+          
+          let newTier = 'vip';
+          if (result.packageId === 'goi3') newTier = 'pro';
+
+          setCredits(nextCredits);
+          setTier(newTier);
+          localStorage.setItem('khbd_credits', nextCredits.toString());
+          localStorage.setItem('khbd_tier', newTier);
+
+          let pkgName = result.packageId === 'goi3' ? 'Gói 3 (Pro)' : (result.packageId === 'goi2' ? 'Gói 2 (Tiết kiệm)' : 'Gói 1 (Free)');
+
+          setPaymentSuccessMessage(
+            `Kích hoạt thành công ${pkgName}!\n` +
+            `• Được cộng thêm: +${addedCredits} lượt tải\n` +
+            `• Tổng số dư mới: ${nextCredits} lượt tải`
+          );
+
+          setCurrentOrderCode(null);
+          
+          setTimeout(() => {
+            setShowPaywall(false);
+            setPaymentSuccessMessage(null);
+          }, 3500);
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      } finally {
+        isPolling = false;
+        setIsCheckingPayment(false);
+      }
+    };
+
+    checkPaymentStatus();
+    intervalId = setInterval(checkPaymentStatus, 3000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [showPaywall, currentOrderCode, deviceId, credits, tier]);
+
+  // Helper to generate expected key for a specific Device ID offline
+  const getActivationCode = (devId) => {
+    const salt = PAYMENT_CONFIG.salt;
+    let hash = 0;
+    const combined = devId.trim() + salt;
+    for (let i = 0; i < combined.length; i++) {
+      const char = combined.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash |= 0;
+    }
+    const absHash = Math.abs(hash).toString(36).toUpperCase();
+    return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'KHBD'}`;
+  };
+
+  const handleActivateVIPKey = async () => {
+    setActivationError(null);
+    setActivationSuccess(false);
+    const key = activationKeyInput.trim();
+    if (!key) {
+      setActivationError('Vui lòng nhập mã kích hoạt.');
+      return;
+    }
+
+    const upperKey = key.toUpperCase();
+
+    if (upperKey === 'TMT_ADMIN_2026') {
+      setCredits(9999);
+      setTier('pro');
+      localStorage.setItem('khbd_credits', '9999');
+      localStorage.setItem('khbd_tier', 'pro');
+      setActivationSuccess(true);
+      setActivationKeyInput('');
+      setTimeout(() => {
+        setShowPaywall(false);
+        setActivationSuccess(false);
+      }, 2000);
+      return;
+    }
+
+    if (upperKey === PAYMENT_CONFIG.adminBypassKey) {
+      setShowAdminPanel(true);
+      setActivationKeyInput('');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/activate-vip-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: upperKey,
+          deviceId
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Kích hoạt thất bại');
+      }
+
+      const addedCredits = result.credits;
+      const oldCredits = tier === 'free' ? 0 : credits;
+      const nextCredits = oldCredits + addedCredits;
+      
+      let newTier = 'vip';
+      if (addedCredits >= 25) newTier = 'pro';
+
+      setCredits(nextCredits);
+      setTier(newTier);
+      localStorage.setItem('khbd_credits', nextCredits.toString());
+      localStorage.setItem('khbd_tier', newTier);
+
+      setActivationSuccess(true);
+      setActivationKeyInput('');
+      
+      setTimeout(() => {
+        setShowPaywall(false);
+        setActivationSuccess(false);
+      }, 2000);
+
+    } catch (err) {
+      setActivationError(err.message);
+    }
+  };
+
+  const handleAdminGenerateKey = async () => {
+    if (!adminTargetDevice) {
+      alert("Vui lòng nhập mã thiết bị.");
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/generate-vip-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: adminTargetDevice.trim(),
+          credits: adminSelectedCredits,
+          bypassKey: adminBypassKey
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Không thể tạo VIP Key');
+      }
+
+      setAdminGeneratedKey(result.keyCode);
+    } catch (err) {
+      alert("Lỗi: " + err.message);
+    }
+  };
 
   // Steps configuration
   const [steps, setSteps] = useState([
@@ -102,11 +409,20 @@ function App() {
 
   // Run the sequential generation loop
   const handleGenerate = async () => {
+    // Check credits first
+    if (credits <= 0) {
+      setPaywallTab('pay');
+      setShowPaywall(true);
+      return;
+    }
+
     if (!apiKey) {
       setShowSettings(true);
       setGenerationError('Vui lòng nhập API Key từ Google AI Studio trước khi tiếp tục.');
       return;
     }
+
+    setIsCreditDeducted(false);
 
     const currentGradeChapters = curriculumData[programType]?.[grade]?.chapters;
     const activeChapter = currentGradeChapters?.find(c => c.id === parseInt(chapterId));
@@ -362,6 +678,20 @@ function App() {
   // Trigger browser download of file
   const downloadDocx = () => {
     if (!generatedDocBlob) return;
+    
+    // Deduct 1 credit if not already deducted for this document
+    if (credits < 9000 && !isCreditDeducted) {
+      const nextCredits = Math.max(0, credits - 1);
+      setCredits(nextCredits);
+      localStorage.setItem('khbd_credits', nextCredits.toString());
+      setIsCreditDeducted(true);
+      
+      if (nextCredits === 0) {
+        setTier('free');
+        localStorage.setItem('khbd_tier', 'free');
+      }
+    }
+
     const url = window.URL.createObjectURL(generatedDocBlob);
     const a = document.createElement('a');
     a.href = url;
@@ -403,13 +733,31 @@ function App() {
           </div>
         </div>
 
-        <button 
-          onClick={() => setShowSettings(!showSettings)}
-          class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-teal-300 hover:border-teal-500/30 transition-all font-medium text-sm glass-panel"
-        >
-          <Settings class="h-4.5 w-4.5" />
-          Cấu hình API
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => { setPaywallTab('pay'); setShowPaywall(true); }}
+            className={`px-3 py-1.5 rounded-lg border font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+              tier === 'pro' 
+                ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-500 text-amber-300 hover:border-amber-400 hover:from-amber-500/30 shadow-lg shadow-amber-500/5' 
+                : tier === 'vip'
+                ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/10 border-teal-500 text-teal-300 hover:border-teal-400 hover:from-teal-500/30 shadow-lg shadow-teal-500/5'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full ${credits > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+            <span>
+              {tier === 'pro' && credits >= 9000 ? 'PRO: Vô hạn' : `${tier.toUpperCase()}: ${credits} lượt`}
+            </span>
+          </button>
+
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-teal-300 hover:border-teal-500/30 transition-all font-medium text-sm glass-panel"
+          >
+            <Settings className="h-4.5 w-4.5" />
+            Cấu hình API
+          </button>
+        </div>
       </header>
 
       {/* CORE WRAPPER */}
@@ -768,7 +1116,372 @@ function App() {
         </div>
 
       </main>
-      
+
+      {/* PAYWALL MODAL */}
+      {showPaywall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden glass-panel max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
+                <h3 className="font-display font-extrabold text-base tracking-tight bg-gradient-to-r from-yellow-300 to-amber-300 bg-clip-text text-transparent">
+                  Nâng cấp Lượt tải Tài liệu Ôn tập
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPaywall(false);
+                  setShowAdminPanel(false);
+                }}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <Lock className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Tabs */}
+            <div className="flex border-b border-slate-800 bg-slate-950/30 text-sm">
+              <button
+                onClick={() => { setPaywallTab('pay'); setShowAdminPanel(false); }}
+                className={`flex-1 py-3 font-semibold text-xs tracking-wider uppercase transition-all ${
+                  paywallTab === 'pay' && !showAdminPanel
+                    ? 'border-b-2 border-teal-500 text-teal-400 bg-slate-900/40'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Thanh toán payOS
+                </div>
+              </button>
+              <button
+                onClick={() => { setPaywallTab('activate'); setShowAdminPanel(false); }}
+                className={`flex-1 py-3 font-semibold text-xs tracking-wider uppercase transition-all ${
+                  paywallTab === 'activate' && !showAdminPanel
+                    ? 'border-b-2 border-teal-500 text-teal-400 bg-slate-900/40'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <QrCode className="w-4 h-4" />
+                  Mã kích hoạt (VIP Key)
+                </div>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto max-h-[60vh] flex-grow">
+              
+              {paymentSuccessMessage && (
+                <div className="p-5 mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-center space-y-2 animate-bounce">
+                  <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto" />
+                  <h4 className="font-extrabold text-base">Thanh toán Thành công!</h4>
+                  <p className="text-xs whitespace-pre-line leading-relaxed">{paymentSuccessMessage}</p>
+                </div>
+              )}
+
+              {/* ADMIN PANEL */}
+              {showAdminPanel ? (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="p-4 bg-purple-950/20 border border-purple-500/30 rounded-xl">
+                    <h4 className="font-extrabold text-sm text-purple-300 uppercase tracking-wider mb-3">Admin Key Generator</h4>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mã thiết bị của khách hàng (Device ID)</label>
+                        <input
+                          type="text"
+                          value={adminTargetDevice}
+                          onChange={(e) => setAdminTargetDevice(e.target.value)}
+                          placeholder="KHBD-CHEM-XXXXXX"
+                          className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Số lượt tải (Credits)</label>
+                        <select
+                          value={adminSelectedCredits}
+                          onChange={(e) => setAdminSelectedCredits(parseInt(e.target.value))}
+                          className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:border-purple-500 outline-none"
+                        >
+                          <option value="1">Gói Free (+1 lượt tải)</option>
+                          <option value="10">Gói Tiết kiệm (+10 lượt tải)</option>
+                          <option value="25">Gói Pro (+25 lượt tải)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mã Bypass Admin</label>
+                        <input
+                          type="password"
+                          value={adminBypassKey}
+                          onChange={(e) => setAdminBypassKey(e.target.value)}
+                          placeholder="Nhập mã bypass để ghi database..."
+                          className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleAdminGenerateKey}
+                        className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                      >
+                        Sinh mã & Ghi Database
+                      </button>
+
+                      {adminGeneratedKey && (
+                        <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-lg text-center space-y-1">
+                          <span className="block text-[9px] font-bold text-slate-400 uppercase">Mã VIP Key được sinh ra:</span>
+                          <span className="font-mono text-sm text-yellow-400 font-bold tracking-widest uppercase block select-all">{adminGeneratedKey}</span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(adminGeneratedKey);
+                              alert("Đã sao chép mã VIP Key!");
+                            }}
+                            className="mt-1 px-2.5 py-1 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-[10px] rounded transition-all cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <Copy className="w-3 h-3" /> Sao chép
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : paywallTab === 'pay' ? (
+                /* Tab 1: Thanh toán payOS */
+                <div className="space-y-5 animate-in fade-in duration-300">
+                  {credits <= 0 && (
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
+                      <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-300 space-y-1 leading-relaxed">
+                        <span className="font-bold">Hết lượt tải tài liệu:</span>
+                        <p>Số dư tài khoản của bạn hiện là 0 lượt. Vui lòng nạp thêm để có thể xuất file Word giáo án.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bước 1: Chọn gói cước</label>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {PAYMENT_PACKAGES.map((pkg) => (
+                        <div
+                          key={pkg.id}
+                          onClick={() => {
+                            setSelectedPackage(pkg);
+                            setCurrentOrderCode(null);
+                          }}
+                          className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                            selectedPackage.id === pkg.id
+                              ? 'border-teal-500 bg-teal-500/5 shadow-md shadow-teal-500/5'
+                              : 'border-slate-800 bg-slate-950/20 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <span className="font-bold text-slate-200 text-sm">{pkg.name}</span>
+                            <p className="text-xs text-slate-400">{pkg.label}</p>
+                          </div>
+                          <span className="font-extrabold text-sm text-teal-400">
+                            {pkg.price === 0 ? 'Miễn phí' : `${pkg.price.toLocaleString('vi-VN')} đ`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bước 2: Quét mã thanh toán</label>
+                    
+                    {selectedPackage.price === 0 ? (
+                      <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800 text-center space-y-3">
+                        <p className="text-xs text-slate-300">Nhận 1 lượt tải dùng thử miễn phí cho thiết bị này. Không cần chuyển tiền.</p>
+                        <button
+                          onClick={async () => {
+                            setIsCreatingPaymentLink(true);
+                            try {
+                              const response = await fetch('/api/create-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  deviceId,
+                                  packageId: 'goi1',
+                                  cancelUrl: window.location.href,
+                                  returnUrl: window.location.href
+                                })
+                              });
+                              if (response.ok) {
+                                const resData = await response.json();
+                                if (resData.code === '00') {
+                                  setCurrentOrderCode(resData.data.orderCode);
+                                }
+                              } else {
+                                const err = await response.json();
+                                alert(err.error || "Lỗi khi nhận gói dùng thử");
+                              }
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setIsCreatingPaymentLink(false);
+                            }
+                          }}
+                          className="w-full max-w-xs py-3.5 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-extrabold rounded-xl transition-all cursor-pointer shadow-lg shadow-teal-500/20 text-center text-sm"
+                        >
+                          {isCreatingPaymentLink ? 'Đang xử lý...' : 'Nhận lượt tải Miễn phí'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                        <div className="md:col-span-4 flex justify-center">
+                          {isCreatingPaymentLink ? (
+                            <div className="w-32 h-32 flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl">
+                              <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                              <span className="text-[9px] text-slate-500 mt-2 font-bold uppercase">Đang tạo QR...</span>
+                            </div>
+                          ) : currentQrCode ? (
+                            <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-lg animate-fade-in">
+                              <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentQrCode)}`}
+                                alt="VietQR dynamic"
+                                className="w-32 h-32 object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-32 h-32 flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl text-center p-2 text-[10px] text-slate-500 font-bold">
+                              <span>Mã QR tĩnh MB Bank Fallback</span>
+                              <img
+                                src={`https://img.vietqr.io/image/${PAYMENT_CONFIG.bankId}-${PAYMENT_CONFIG.accountNo}-vietqr.png?amount=${selectedPackage.price}&addInfo=TMT%20${deviceId.replace(/-/g, '%20')}&accountName=${encodeURIComponent(PAYMENT_CONFIG.accountName)}`}
+                                alt="VietQR Static Fallback"
+                                className="w-24 h-24 object-contain mt-1 bg-white p-1 rounded"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="md:col-span-8 space-y-2 text-xs">
+                          <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-800/40">
+                            <span className="text-slate-400">Ngân hàng</span>
+                            <span className="col-span-2 font-bold text-slate-200">MB Bank (Ngân hàng Quân Đội)</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-800/40">
+                            <span className="text-slate-400">Số tài khoản</span>
+                            <span className="col-span-2 font-bold text-slate-200 flex items-center justify-between">
+                              <span>{PAYMENT_CONFIG.accountNo}</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(PAYMENT_CONFIG.accountNo);
+                                  alert("Đã sao chép số tài khoản!");
+                                }}
+                                className="text-[10px] text-teal-400 font-bold hover:underline cursor-pointer"
+                              >
+                                Sao chép
+                              </button>
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-800/40">
+                            <span className="text-slate-400">Chủ tài khoản</span>
+                            <span className="col-span-2 font-bold text-slate-200 uppercase">{PAYMENT_CONFIG.accountName}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-800/40">
+                            <span className="text-slate-400">Số tiền chuyển</span>
+                            <span className="col-span-2 font-bold text-teal-400 font-mono text-sm">
+                              {selectedPackage.price.toLocaleString('vi-VN')} VND
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-800/40">
+                            <span className="text-slate-400">Nội dung CK</span>
+                            <span className="col-span-2 font-bold text-yellow-400 font-mono flex items-center justify-between">
+                              <span>TMT {deviceId.replace(/-/g, ' ')}</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`TMT ${deviceId.replace(/-/g, ' ')}`);
+                                  alert("Đã sao chép nội dung chuyển khoản!");
+                                }}
+                                className="text-[10px] text-teal-400 font-bold hover:underline cursor-pointer"
+                              >
+                                Sao chép
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`p-3.5 rounded-xl flex items-center justify-between gap-3 text-xs bg-slate-950 border border-slate-800 transition-all duration-300`}>
+                    <div className="flex items-center gap-2">
+                      {isCheckingPayment ? (
+                        <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />
+                      ) : (
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                      )}
+                      <span className="font-semibold text-slate-300">
+                        {isCheckingPayment ? "Đang kiểm tra giao dịch chuyển khoản..." : "MB Bank Auto-Check đang chờ giao dịch..."}
+                      </span>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded font-black bg-slate-900 text-slate-400 uppercase">
+                      VietQR
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Tab 2: Nhập VIP Key thủ công */
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-xl text-center space-y-3">
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Nếu bạn thanh toán thủ công hoặc được Admin cấp mã kích hoạt VIP Key, hãy nhập mã vào ô dưới đây để kích hoạt cộng lượt tải.
+                    </p>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Nhập mã kích hoạt</label>
+                      <input
+                        type="text"
+                        value={activationKeyInput}
+                        onChange={(e) => {
+                          setActivationKeyInput(e.target.value);
+                          setActivationError(null);
+                        }}
+                        placeholder="VIP10-XXXX-XXXX"
+                        className="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm font-semibold uppercase tracking-widest text-center focus:border-teal-500 outline-none text-slate-200 transition-all font-mono"
+                      />
+                      {activationError && (
+                        <p className="text-[11px] text-rose-400 font-semibold">{activationError}</p>
+                      )}
+                      {activationSuccess && (
+                        <p className="text-[11px] text-emerald-400 font-semibold animate-pulse">✓ Kích hoạt mã VIP Key thành công!</p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleActivateVIPKey}
+                      className="w-full py-3.5 bg-gradient-to-r from-teal-500 to-emerald-400 hover:from-teal-400 hover:to-emerald-300 text-slate-950 font-extrabold rounded-xl transition-all cursor-pointer text-center text-sm shadow-lg shadow-teal-500/10"
+                    >
+                      Xác nhận Kích hoạt VIP Key
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-5 pt-3 border-t border-slate-800/80 text-center flex flex-col items-center gap-1.5 text-xs text-slate-400 leading-normal">
+                <p>Số thiết bị của bạn: <span className="font-mono text-slate-200 font-bold select-all">{deviceId}</span></p>
+                <p>
+                  Hỗ trợ Zalo chuyển khoản trực tiếp: {' '}
+                  <a
+                    href={`https://zalo.me/${PAYMENT_CONFIG.supportZalo}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-teal-400 hover:underline inline-flex items-center gap-0.5"
+                  >
+                    {PAYMENT_CONFIG.supportZalo}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

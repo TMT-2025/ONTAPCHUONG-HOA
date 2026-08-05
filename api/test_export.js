@@ -24,6 +24,8 @@ Một số phím tắt thông dụng:
 | CML | <cml> | <cml><molecule/></cml> |
 | SMILES | C=C | CH2=CH2 |
 
+nHOOC-(CH<sub>2</sub>)<sub>4</sub>-COOH + nH<sub>2</sub>N-(CH<sub>2</sub>)<sub>6</sub>-NH<sub>2</sub> <span style="display:inline-block; transform: scaleY(1.5);">→</span> [-CO-(CH<sub>2</sub>)<sub>4</sub>-CO-NH-(CH<sub>2</sub>)<sub>6</sub>-NH-]<sub>n</sub> + 2nH<sub>2</sub>O (điều kiện: nhiệt độ, xúc tác)
+
 > **Lưu ý:** Cần chú ý các thẻ đóng mở để tránh lỗi cú pháp.
 `;
 

@@ -15,7 +15,8 @@ const {
   TableOfContents,
   PageBreak,
   Header,
-  PageNumber
+  PageNumber,
+  VerticalAlign
 } = docx;
 
 // Helper: Sanitize LaTeX math syntax and convert it to readable Unicode text
@@ -153,6 +154,100 @@ function isChemicalEquation(text) {
   return hasArrow && hasSymbols;
 }
 
+// Splits an equation string into LHS, arrow, and RHS
+function splitEquation(text) {
+  const arrowRegex = /<span[^>]*>[\s\S]*?<\/span>|→|⇌|-->|->|<=>/i;
+  const match = text.match(arrowRegex);
+  if (!match) return null;
+  
+  const arrow = match[0];
+  const index = match.index;
+  const left = text.substring(0, index).trim();
+  const right = text.substring(index + arrow.length).trim();
+  
+  let cleanArrow = '→';
+  if (arrow.includes('⇌') || arrow.includes('<=>')) {
+    cleanArrow = '⇌';
+  }
+  
+  return { left, arrow: cleanArrow, right };
+}
+
+// Generates an invisible table representing a chemical equation with condition text centered above the arrow
+function createEquationTable(leftText, arrowText, rightText, conditionText) {
+  return new Table({
+    width: { size: 100, type: 'pct' },
+    alignment: AlignmentType.CENTER,
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: parseInlineText(leftText, 26, "000000", false),
+                alignment: AlignmentType.RIGHT,
+                spacing: { line: 360 }
+              })
+            ],
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: 42, type: 'pct' },
+            margins: { right: 100 }
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: conditionText,
+                    font: "Times New Roman",
+                    size: 20,
+                    italic: true
+                  })
+                ],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 40 }
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: arrowText,
+                    font: "Times New Roman",
+                    size: 28,
+                    bold: true
+                  })
+                ],
+                alignment: AlignmentType.CENTER
+              })
+            ],
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: 16, type: 'pct' }
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: parseInlineText(rightText, 26, "000000", false),
+                alignment: AlignmentType.LEFT,
+                spacing: { line: 360 }
+              })
+            ],
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: 42, type: 'pct' },
+            margins: { left: 100 }
+          })
+        ]
+      })
+    ],
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE }
+    }
+  });
+}
+
 // Helper to detect if a text represents a multiple choice option like A., B., C., D.
 function isOption(text, letter) {
   if (!text) return false;
@@ -258,8 +353,35 @@ function convertMarkdownToDocx(markdownText) {
     
     // Handle stand-alone Chemical Equation rendering in center
     if (isChemicalEquation(cleanText)) {
+      const conditionMatch = cleanText.match(/\(([^)]*(?:điều kiện|đk|t°|t\^o|nhiệt độ|xúc tác|xt|ánh sáng|as|lên men|men|áp suất|p)[^)]*)\)$/i);
+      
+      let equationText = cleanText;
+      let conditionText = "";
+      
+      if (conditionMatch) {
+        conditionText = conditionMatch[1].trim();
+        equationText = cleanText.substring(0, conditionMatch.index).trim();
+      }
+      
+      // Clean HTML span tags that are sometimes added by the model around arrows
+      equationText = equationText
+        .replace(/<span[^>]*>/gi, '')
+        .replace(/<\/span>/gi, '')
+        .trim();
+      
+      const parts = splitEquation(equationText);
+      if (parts && conditionText) {
+        docChildren.push(createEquationTable(parts.left, parts.arrow, parts.right, conditionText));
+        return;
+      }
+      
+      const normalizedEqText = equationText
+        .replace(/-->/g, ' → ')
+        .replace(/<=>/g, ' ⇌ ')
+        .replace(/->/g, ' → ');
+
       docChildren.push(new Paragraph({
-        children: parseInlineText(cleanText, 26, "000000", false),
+        children: parseInlineText(normalizedEqText, 26, "000000", false),
         alignment: AlignmentType.CENTER,
         spacing: { before: 180, after: 180 }
       }));

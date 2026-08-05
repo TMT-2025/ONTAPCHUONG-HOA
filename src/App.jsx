@@ -419,12 +419,6 @@ function App() {
       return;
     }
 
-    if (!apiKey) {
-      setShowSettings(true);
-      setGenerationError('Vui lòng nhập API Key từ Google AI Studio trước khi tiếp tục.');
-      return;
-    }
-
     setIsCreditDeducted(false);
 
     const currentGradeChapters = curriculumData[programType]?.[grade]?.chapters;
@@ -753,13 +747,7 @@ function App() {
             </span>
           </button>
 
-          <button 
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-teal-300 hover:border-teal-500/30 transition-all font-medium text-sm glass-panel"
-          >
-            <Settings className="h-4.5 w-4.5" />
-            Cấu hình API
-          </button>
+
         </div>
       </header>
 
@@ -769,60 +757,6 @@ function App() {
         {/* LEFT COLUMN: Controls & Settings */}
         <div class="lg:col-span-5 flex flex-col gap-6">
           
-          {/* SETTINGS PANEL (COLLAPSIBLE) */}
-          {showSettings && (
-            <div class="rounded-xl glass-panel p-5 border border-teal-500/10 shadow-xl relative overflow-hidden">
-              <div class="absolute -right-16 -top-16 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl"></div>
-              <h2 class="font-display font-bold text-lg text-teal-300 mb-4 flex items-center gap-2">
-                <Settings class="h-5 w-5" />
-                Cấu hình API Studio
-              </h2>
-              <div class="flex flex-col gap-4">
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Google AI Studio API Key (Paid key)
-                  </label>
-                  <input 
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="AIzaSy..."
-                    class="w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-teal-500 font-mono text-sm"
-                  />
-                  <p class="text-[10px] text-slate-500 mt-1 flex items-start gap-1">
-                    <Info class="h-3.5 w-3.5 text-teal-500 shrink-0 mt-0.5" />
-                    Key được lưu cục bộ trên trình duyệt của bạn (localStorage), không lưu trữ trên máy chủ.
-                  </p>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Model Engine
-                  </label>
-                  <input 
-                    type="text"
-                    value={modelName}
-                    onChange={(e) => setModelName(e.target.value)}
-                    placeholder="gemini-3.5-flash-lite"
-                    class="w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-teal-500 font-mono text-sm"
-                  />
-                </div>
-                <div class="flex gap-2.5 mt-2 justify-end">
-                  <button 
-                    onClick={() => setShowSettings(false)}
-                    class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200"
-                  >
-                    Hủy
-                  </button>
-                  <button 
-                    onClick={saveSettings}
-                    class="px-4 py-2 bg-teal-50 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-lg shadow-lg shadow-teal-500/20 transition-all"
-                  >
-                    Lưu cấu hình
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* SELECTOR PANEL */}
           <div class="rounded-xl glass-panel p-4 border border-slate-800 shadow-lg">

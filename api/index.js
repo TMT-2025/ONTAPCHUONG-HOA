@@ -326,6 +326,13 @@ const getActivationCode = (devId) => {
   return `${absHash.substring(0, 4)}-${absHash.substring(4, 8)}-${absHash.substring(8, 12) || 'KHBD'}`;
 };
 
+const verifySignature = (data, signature, checksumKey) => {
+  const sortedKeys = Object.keys(data).sort();
+  const signString = sortedKeys.map((key) => `${key}=${data[key]}`).join('&');
+  const computedSignature = crypto.createHmac('sha256', checksumKey).update(signString).digest('hex');
+  return computedSignature === signature;
+};
+
 const supabaseFetch = async (path, options = {}) => {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
